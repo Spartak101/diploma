@@ -10,10 +10,7 @@ import searchengine.repository.PageRepository;
 import searchengine.repository.SiteRepository;
 import searchengine.services.RepositoryService;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 @Data
 public class InitializationOfEntityFields {
@@ -52,11 +49,12 @@ public class InitializationOfEntityFields {
         return site;
     }
 
-    protected void initialisationPage(Site site, String pathParent, String pathHtml, int httpCode, Document doc) {
+    protected void initialisationPage(Site site, String pathHtml, int httpCode, Document doc) {
         Page page = new Page();
         page.setCode(httpCode);
+//        System.out.println("doc   " + String.valueOf(doc));
         page.setContent(String.valueOf(doc));
-        String path = pathHtml.replaceAll(pathParent, "");
+        String path = pathHtml.replaceAll(site.getUrl(), "");
         page.setPath(path);
         page.setSite(site);
         pageRepository.save(page);
@@ -66,7 +64,7 @@ public class InitializationOfEntityFields {
     private void initialisationLemmas(Document doc, Site site, Page page) {
         LemmasOfPage lemmasOfPage = new LemmasOfPage(doc);
         HashMap<String, Integer> lemmas = lemmasOfPage.lemmas();
-        List<String> lemmasArray = (List<String>) lemmas.keySet();
+        Set<String> lemmasArray = lemmas.keySet();
         for (String s : lemmasArray) {
             Lemma lemma = new Lemma();
             lemma.setSite(site);

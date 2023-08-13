@@ -60,6 +60,9 @@ public class RepositoryService {
         } else {
             urlList = sites.getSites().stream().map(Site -> Site.getUrl()).collect(Collectors.toList());
         }
+//        for (String s : urlList) {
+//            System.out.println("init " + s);
+//        }
         return urlList;
     }
 
@@ -69,8 +72,15 @@ public class RepositoryService {
         List<String> urlList = initialisationArrayPath();
         for (int i = 0; i < urlList.size(); i++) {
             RequestStartTime startTime = new RequestStartTime();
-            ParseHtml parseHtml = new ParseHtml(urlList.get(i), new Site(), urlList.get(i), allLink, markStop, startTime, siteRepository, pageRepository, lemmaRepository, indexObjectRepository);
+            ParseHtml parseHtml = new ParseHtml(normalisePathParent(urlList.get(i)), normalisePathParent(urlList.get(i)), allLink, markStop, startTime, siteRepository, pageRepository, lemmaRepository, indexObjectRepository);
             ArrayList<String> url = new ForkJoinPool().invoke(parseHtml);
         }
+    }
+    private String normalisePathParent(String pathParent) {
+        String string = pathParent.replaceAll("www.", "");
+        if (string.charAt(string.length() - 1) != '/') {
+            return string + "/";
+        }
+        return string;
     }
 }

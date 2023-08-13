@@ -16,7 +16,7 @@ public class LemmasOfPage {
     public LemmasOfPage(Document doc) {
         this.doc = doc;
     }
-    
+
     public HashMap<String, Integer> lemmas() {
         Elements elementLinks = doc.select("a");
         Elements elementSpan = doc.select("span");
@@ -24,11 +24,12 @@ public class LemmasOfPage {
         HashMap<String, Integer> lemmas = new HashMap<>();
         for (int i = 1; i < 7; i++) {
             Elements headings = doc.select("h" + i);
-            countLemmas(stringsForLemmas(headings), lemmas);
+            lemmas.putAll(countLemmas(stringsForLemmas(headings), lemmas));
         }
-        countLemmas(stringsForLemmas(elementLinks), lemmas);
-        countLemmas(stringsForLemmas(elementSpan), lemmas);
-        countLemmas(stringsForLemmas(elementParagraph), lemmas);
+        lemmas.putAll(countLemmas(stringsForLemmas(elementLinks), lemmas));
+        lemmas.putAll(countLemmas(stringsForLemmas(elementSpan), lemmas));
+        lemmas.putAll(countLemmas(stringsForLemmas(elementParagraph), lemmas));
+//        lemmas.forEach((key, value) -> System.out.println(key + " " + value));
         return lemmas;
     }
 
@@ -41,6 +42,7 @@ public class LemmasOfPage {
                 lemmas.put(s, countLemmas + 1);
             }
         }
+//        lemmas.forEach((key, value) -> System.out.println("countLemmas  " + key + " " + value));
         return lemmas;
     }
 
@@ -52,17 +54,27 @@ public class LemmasOfPage {
             List<WordformMeaning> lemmas = lookupForMeanings(str);
             if (superfluousStrings(lemmas)) {
                 arrayList.add(String.valueOf(lemmas.get(0).getLemma()));
+//                System.out.println("stringsForLemmas  " + String.valueOf(lemmas.get(0).getLemma()));
             }
         }
+//        arrayList.forEach(System.out::println);
         return arrayList;
     }
 
-    private boolean superfluousStrings(List<WordformMeaning> lemmas){
-        String string = lemmas.get(0).getMorphology().toString();
-        if (string == "МЕЖД" || string == "ПРЕДЛ" || string == "СОЮЗ"){
+    private boolean superfluousStrings(List<WordformMeaning> lemmas) {
+        String string;
+        try {
+            string = lemmas.get(0).getMorphology().toString();
+            switch (string) {
+                case "МЕЖД", "СОЮЗ", "ПРЕДЛ", "ЧАСТ":
+                    System.out.println("lemma false  " + string);
+                    return false;
+                default:
+//                System.out.println("lemma true  " + string);
+                    return true;
+            }
+        } catch (Exception ex) {
             return false;
-        } else {
-            return true;
         }
     }
 }

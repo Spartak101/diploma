@@ -32,10 +32,11 @@ public class ParseHtml extends RecursiveTask<ArrayList<String>> {
     private IndexObjectRepository indexObjectRepository;
     private InitializationOfEntityFields initializationOfEntityFields;
     private Connection.Response response;
+    private Elements element;
 
-    public ParseHtml(String pathParent, Site site, String pathHtml, HashSet<String> allLink, boolean markStop, RequestStartTime startTime, SiteRepository siteRepository, PageRepository pageRepository, LemmaRepository lemmaRepository, IndexObjectRepository indexObjectRepository) throws IOException {
-        this.pathParent = normalisePathParent(pathParent);
-        this.htmlFile = normalisePathParent(pathHtml);
+    public ParseHtml(String pathParent, String pathHtml, HashSet<String> allLink, boolean markStop, RequestStartTime startTime, SiteRepository siteRepository, PageRepository pageRepository, LemmaRepository lemmaRepository, IndexObjectRepository indexObjectRepository) throws IOException {
+        this.htmlFile = pathHtml;
+        this.pathParent = pathParent;
         this.allLink = allLink;
         this.markStop = markStop;
         this.siteRepository = siteRepository;
@@ -43,30 +44,24 @@ public class ParseHtml extends RecursiveTask<ArrayList<String>> {
         this.lemmaRepository = lemmaRepository;
         this.indexObjectRepository = indexObjectRepository;
         this.initializationOfEntityFields = new InitializationOfEntityFields(siteRepository, pageRepository, lemmaRepository, indexObjectRepository);
-        try {
-            this.startTime = startTime;
-            startTime.setDateStart(System.currentTimeMillis());
-            response = Jsoup.connect(pathHtml).followRedirects(true).execute();
-            switch (response.statusCode()) {
-                case 200 -> {
-                    this.doc = Jsoup.connect(htmlFile)
-                            .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36")
-                            .referrer("http://www.google.com")
-                            .get();
-                    this.site = initializationOfEntityFields.initialisationSite(pathParent, response.statusCode(), doc);
-                    Elements element = doc.select("a");
-                    absUrl = (ArrayList<String>) element.stream().map(element1 -> element1.absUrl("href")).collect(Collectors.toList());
-                    System.out.println("1-200 " + htmlFile);
-                }
-                default -> {
-                    this.site = initializationOfEntityFields.initialisationSite(pathParent, response.statusCode(), doc);
-                    absUrl = new ArrayList<>();
-                    System.out.println("1-error " + htmlFile + "\n" + response.statusCode());
-                }
+        this.startTime = startTime;
+        startTime.setDateStart(System.currentTimeMillis());
+        response = Jsoup.connect(pathHtml).followRedirects(true).execute();
+        switch (response.statusCode()) {
+            case 200 -> {
+                this.doc = Jsoup.connect(htmlFile)
+                        .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36")
+                        .referrer("http://www.google.com")
+                        .get();
+                System.out.println("1-200 " + htmlFile);
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+            default -> {
+                absUrl = new ArrayList<>();
+                System.out.println("1-error " + htmlFile + "\n" + response.statusCode());
+            }
         }
+        this.element = doc.select("a");
+        absUrl = (ArrayList<String>) element.stream().map(element1 -> element1.absUrl("href")).collect(Collectors.toList());
     }
 
 
@@ -75,12 +70,15 @@ public class ParseHtml extends RecursiveTask<ArrayList<String>> {
         HashSet<String> name = allLink;
         ArrayList<String> name2 = new ArrayList<>();
         ArrayList<ParseHtml> tasks = new ArrayList<>();
-        if (absUrl.size() == 0){
+        if (name.isEmpty()) {
+            this.site = initializationOfEntityFields.initialisationSite(pathParent, response.statusCode(), doc);
+        }
+        if (absUrl == null) {
             return new ArrayList<>();
         }
         try {
             for (int i = 0; i < absUrl.size(); i++) {
-                if (absUrl.get(i).matches(pathParent + "([\\/[a-z0-9-]+]+\\/?\"?[.html]?)")) {
+                if (absUrl.get(i).matches(pathParent + "([\\/[a-z0-9-]+]+\\/?[a-z0-9-]*\\/*(.html)?\"?)")) {
                     if (!name.contains(absUrl.get(i)) | !absUrl.get(i).equals(pathParent)) {
                         name.add(absUrl.get(i));
                         long startQueryHtml = System.currentTimeMillis();
@@ -90,8 +88,8 @@ public class ParseHtml extends RecursiveTask<ArrayList<String>> {
                         System.out.println("2 " + absUrl.get(i));
                         ParseHtml html;
                         try {
-                            html = new ParseHtml(pathParent, site, absUrl.get(i), allLink, markStop, startTime, siteRepository, pageRepository, lemmaRepository, indexObjectRepository);
-                            initializationOfEntityFields.initialisationPage(site, pathParent, absUrl.get(i), response.statusCode(), doc);
+                            html = new ParseHtml(pathParent, absUrl.get(i), allLink, markStop, startTime, siteRepository, pageRepository, lemmaRepository, indexObjectRepository);
+                            initializationOfEntityFields.initialisationPage(site, absUrl.get(i), response.statusCode(), doc);
                             html.fork();
                             tasks.add(html);
                         } catch (IOException e) {
@@ -110,12 +108,5 @@ public class ParseHtml extends RecursiveTask<ArrayList<String>> {
             name2.add(s);
         }
         return name2;
-    }
-    private String normalisePathParent(String pathParent){
-        String string = pathParent.replaceAll("www.", "");
-        if (string.charAt(string.length()-1) != '/') {
-            return string + "/";
-        }
-        return string;
     }
 }

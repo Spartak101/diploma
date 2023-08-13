@@ -4,7 +4,7 @@ spring.datasource.password: testtest
 spring.jpa.hibernate.ddl-auto: create-drop
 #spring.jpa.hibernate.order_inserts: true
 #spring.jpa.hibernate.jdbc.batch_size: 100
-spring.jpa.show-sql: true
+spring.jpa.show-sql: false
 spring.thymeleaf.cache: false
 spring.main.banner-mode: off
   
