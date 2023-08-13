@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 public class ParseHtml extends RecursiveTask<ArrayList<String>> {
     private String htmlFile;
     private HashSet<String> allLink;
-    private boolean markStop;
+    private MarkStop markStop;
     private Document doc;
     private ArrayList<String> absUrl;
     private String pathParent;
@@ -34,7 +34,7 @@ public class ParseHtml extends RecursiveTask<ArrayList<String>> {
     private Connection.Response response;
     private Elements element;
 
-    public ParseHtml(String pathParent, String pathHtml, HashSet<String> allLink, boolean markStop, RequestStartTime startTime, SiteRepository siteRepository, PageRepository pageRepository, LemmaRepository lemmaRepository, IndexObjectRepository indexObjectRepository) throws IOException {
+    public ParseHtml(String pathParent, String pathHtml, HashSet<String> allLink, MarkStop markStop, RequestStartTime startTime, SiteRepository siteRepository, PageRepository pageRepository, LemmaRepository lemmaRepository, IndexObjectRepository indexObjectRepository) throws IOException {
         this.htmlFile = pathHtml;
         this.pathParent = pathParent;
         this.allLink = allLink;
@@ -69,9 +69,12 @@ public class ParseHtml extends RecursiveTask<ArrayList<String>> {
     protected ArrayList<String> compute() {
         HashSet<String> name = allLink;
         ArrayList<String> name2 = new ArrayList<>();
+        ArrayList<String> stoppingList = new ArrayList<>();
         ArrayList<ParseHtml> tasks = new ArrayList<>();
         if (name.isEmpty()) {
             this.site = initializationOfEntityFields.initialisationSite(pathParent, response.statusCode(), doc);
+            initializationOfEntityFields.initialisationPage(site, pathParent, response.statusCode(), doc);
+            System.out.println("Initialisation " + pathParent);
         }
         if (absUrl == null) {
             return new ArrayList<>();
@@ -79,7 +82,7 @@ public class ParseHtml extends RecursiveTask<ArrayList<String>> {
         try {
             for (int i = 0; i < absUrl.size(); i++) {
                 if (absUrl.get(i).matches(pathParent + "([\\/[a-z0-9-]+]+\\/?[a-z0-9-]*\\/*(.html)?\"?)")) {
-                    if (!name.contains(absUrl.get(i)) | !absUrl.get(i).equals(pathParent)) {
+                    if (!name.contains(absUrl.get(i))) {
                         name.add(absUrl.get(i));
                         long startQueryHtml = System.currentTimeMillis();
                         if ((startQueryHtml - startTime.getDateStart()) < 5000) {
@@ -88,10 +91,14 @@ public class ParseHtml extends RecursiveTask<ArrayList<String>> {
                         System.out.println("2 " + absUrl.get(i));
                         ParseHtml html;
                         try {
-                            html = new ParseHtml(pathParent, absUrl.get(i), allLink, markStop, startTime, siteRepository, pageRepository, lemmaRepository, indexObjectRepository);
-                            initializationOfEntityFields.initialisationPage(site, absUrl.get(i), response.statusCode(), doc);
-                            html.fork();
-                            tasks.add(html);
+                            if (!markStop.isMarkStop()) {
+                                html = new ParseHtml(pathParent, absUrl.get(i), allLink, markStop, startTime, siteRepository, pageRepository, lemmaRepository, indexObjectRepository);
+                                initializationOfEntityFields.initialisationPage(site, absUrl.get(i), response.statusCode(), doc);
+                                html.fork();
+                                tasks.add(html);
+                            } else {
+                                stoppingList.add(absUrl.get(i));
+                            }
                         } catch (IOException e) {
                             throw new RuntimeException(e);
                         }

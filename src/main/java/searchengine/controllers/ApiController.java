@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import searchengine.config.SitesList;
+import searchengine.dto.parsing.MarkStop;
 import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.model.Site;
 import searchengine.services.RepositoryService;
@@ -22,7 +23,7 @@ import java.util.stream.Stream;
 @RequestMapping("/api")
 @Slf4j
 public class ApiController {
-    private boolean markStop = false;
+    private MarkStop markStop = new MarkStop();
     private final SitesList sites;
 
     private RepositoryService repositoryService;
@@ -52,13 +53,24 @@ public class ApiController {
 
     @GetMapping("/startIndexing")
     public ResponseEntity startIndexing() throws IOException {
-        if (IsTheClassRunning("searchengine.dto.parsing.ParseHtml")) {
+        if (!markStop.isMarkStop()) {
             return ResponseEntity.badRequest().body("{\n" +
                     "\"result\": \"false\",\n" +
                     "\"error\": \"Индексация уже запущена\"\n" +
                     "}");
         }
-        repositoryService.InitialisationIndexing(sites, markStop);
+        markStop.setMarkStop(false);
+        List<String> list = repositoryService.initialisationArrayPath();
+        for (int i = 0; i < list.size(); i++) {
+            String pathHtml = list.get(i);
+            new Thread(() -> {
+                try {
+                    repositoryService.InitialisationIndexing(pathHtml, markStop);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }).start();
+                    }
         return ResponseEntity.ok().body("{\n" +
                 "\"result\": \"true\"\n" +
                 "}");
@@ -66,8 +78,8 @@ public class ApiController {
 
     @GetMapping("/stopIndexing")
     public ResponseEntity stopIndexing() {
-        if (IsTheClassRunning("searchengine.dto.parsing.ParseHtml")) {
-            markStop = true;
+        if (!markStop.isMarkStop()) {
+            markStop.setMarkStop(true);
             return ResponseEntity.ok().body("{\n" +
                     "\"result\": \"true\"\n" +
                     "}");
@@ -83,14 +95,14 @@ public class ApiController {
         return null;
     }
 
-    private boolean IsTheClassRunning(String className) {
-        Stream<String> stream = Arrays.stream(Thread.currentThread().getStackTrace()).map(stackTraceElement -> stackTraceElement.getClassName().toString());
-        Object[] arrayClassInThread = stream.toArray();
-        for (int i = 0; i < arrayClassInThread.length - 1; i++) {
-            if (arrayClassInThread[i].toString().equals(className)) {
-                return true;
-            }
-        }
-        return false;
-    }
+//    private boolean IsTheClassRunning(String className) {
+//        Stream<String> stream = Arrays.stream(Thread.currentThread().getStackTrace()).map(stackTraceElement -> stackTraceElement.getClassName().toString());
+//        Object[] arrayClassInThread = stream.toArray();
+//        for (int i = 0; i < arrayClassInThread.length - 1; i++) {
+//            if (arrayClassInThread[i].toString().equals(className)) {
+//                return true;
+//            }
+//        }
+//        return false;
+//    }
 }

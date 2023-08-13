@@ -45,6 +45,7 @@ public class InitializationOfEntityFields {
                 site.setName("");
             }
         }
+        System.out.println("save " + site.getUrl());
         siteRepository.save(site);
         return site;
     }
@@ -52,12 +53,12 @@ public class InitializationOfEntityFields {
     protected void initialisationPage(Site site, String pathHtml, int httpCode, Document doc) {
         Page page = new Page();
         page.setCode(httpCode);
-//        System.out.println("doc   " + String.valueOf(doc));
         page.setContent(String.valueOf(doc));
         String path = pathHtml.replaceAll(site.getUrl(), "");
         page.setPath(path);
         page.setSite(site);
         pageRepository.save(page);
+        System.out.println("save page " + path + " for site " + site.getUrl());
         initialisationLemmas(doc, site, page);
     }
 

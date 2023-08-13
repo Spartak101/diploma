@@ -4,6 +4,7 @@ import lombok.Getter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import searchengine.config.SitesList;
+import searchengine.dto.parsing.MarkStop;
 import searchengine.dto.parsing.ParseHtml;
 import searchengine.dto.parsing.RequestStartTime;
 import searchengine.model.Site;
@@ -23,7 +24,7 @@ import java.util.stream.Collectors;
 @Getter
 public class RepositoryService {
     private SitesList sites;
-    private boolean markStop;
+    private MarkStop markStop;
     private HashSet<String> allLink = new HashSet<>();
     private SiteRepository siteRepository;
     private PageRepository pageRepository;
@@ -39,7 +40,7 @@ public class RepositoryService {
         this.indexObjectRepository = indexObjectRepository;
     }
 
-    private List<String> initialisationArrayPath() {
+    public List<String> initialisationArrayPath() {
         List<String> urlList = new ArrayList<>();
         List<Site> listDB = new ArrayList<>();
         try {
@@ -60,21 +61,16 @@ public class RepositoryService {
         } else {
             urlList = sites.getSites().stream().map(Site -> Site.getUrl()).collect(Collectors.toList());
         }
-//        for (String s : urlList) {
-//            System.out.println("init " + s);
-//        }
+        for (String s : urlList) {
+            System.out.println("init " + s);
+        }
         return urlList;
     }
 
-    public void InitialisationIndexing(SitesList sites, boolean markStop) throws IOException {
-        this.sites = sites;
-        this.markStop = markStop;
-        List<String> urlList = initialisationArrayPath();
-        for (int i = 0; i < urlList.size(); i++) {
+    public void InitialisationIndexing(String pathHtml, MarkStop markStop) throws IOException {
             RequestStartTime startTime = new RequestStartTime();
-            ParseHtml parseHtml = new ParseHtml(normalisePathParent(urlList.get(i)), normalisePathParent(urlList.get(i)), allLink, markStop, startTime, siteRepository, pageRepository, lemmaRepository, indexObjectRepository);
+            ParseHtml parseHtml = new ParseHtml(normalisePathParent(pathHtml), normalisePathParent(pathHtml), allLink, markStop, startTime, siteRepository, pageRepository, lemmaRepository, indexObjectRepository);
             ArrayList<String> url = new ForkJoinPool().invoke(parseHtml);
-        }
     }
     private String normalisePathParent(String pathParent) {
         String string = pathParent.replaceAll("www.", "");
