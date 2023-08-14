@@ -6,10 +6,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 import searchengine.model.Site;
-import searchengine.repository.IndexObjectRepository;
-import searchengine.repository.LemmaRepository;
-import searchengine.repository.PageRepository;
-import searchengine.repository.SiteRepository;
+import searchengine.repository.*;
 
 import java.io.IOException;
 import java.util.*;
@@ -30,11 +27,13 @@ public class ParseHtml extends RecursiveTask<ArrayList<String>> {
     private PageRepository pageRepository;
     private LemmaRepository lemmaRepository;
     private IndexObjectRepository indexObjectRepository;
+    private StopObjectRepository stopObjectRepository;
     private InitializationOfEntityFields initializationOfEntityFields;
     private Connection.Response response;
     private Elements element;
 
-    public ParseHtml(String pathParent, String pathHtml, HashSet<String> allLink, MarkStop markStop, RequestStartTime startTime, SiteRepository siteRepository, PageRepository pageRepository, LemmaRepository lemmaRepository, IndexObjectRepository indexObjectRepository) throws IOException {
+    public ParseHtml(Site site, String pathParent, String pathHtml, HashSet<String> allLink, MarkStop markStop, RequestStartTime startTime, SiteRepository siteRepository, PageRepository pageRepository, LemmaRepository lemmaRepository, IndexObjectRepository indexObjectRepository, StopObjectRepository stopObjectRepository) throws IOException {
+        this.site = site;
         this.htmlFile = pathHtml;
         this.pathParent = pathParent;
         this.allLink = allLink;
@@ -43,7 +42,8 @@ public class ParseHtml extends RecursiveTask<ArrayList<String>> {
         this.pageRepository = pageRepository;
         this.lemmaRepository = lemmaRepository;
         this.indexObjectRepository = indexObjectRepository;
-        this.initializationOfEntityFields = new InitializationOfEntityFields(siteRepository, pageRepository, lemmaRepository, indexObjectRepository);
+        this.stopObjectRepository = stopObjectRepository;
+        this.initializationOfEntityFields = new InitializationOfEntityFields(siteRepository, pageRepository, lemmaRepository, indexObjectRepository, stopObjectRepository);
         this.startTime = startTime;
         startTime.setDateStart(System.currentTimeMillis());
         response = Jsoup.connect(pathHtml).followRedirects(true).execute();
@@ -72,7 +72,7 @@ public class ParseHtml extends RecursiveTask<ArrayList<String>> {
         ArrayList<String> stoppingList = new ArrayList<>();
         ArrayList<ParseHtml> tasks = new ArrayList<>();
         if (name.isEmpty()) {
-            this.site = initializationOfEntityFields.initialisationSite(pathParent, response.statusCode(), doc);
+            initializationOfEntityFields.initialisationSite(site, response.statusCode(), doc);
             initializationOfEntityFields.initialisationPage(site, pathParent, response.statusCode(), doc);
             System.out.println("Initialisation " + pathParent);
         }
@@ -92,7 +92,7 @@ public class ParseHtml extends RecursiveTask<ArrayList<String>> {
                         ParseHtml html;
                         try {
                             if (!markStop.isMarkStop()) {
-                                html = new ParseHtml(pathParent, absUrl.get(i), allLink, markStop, startTime, siteRepository, pageRepository, lemmaRepository, indexObjectRepository);
+                                html = new ParseHtml(site, pathParent, absUrl.get(i), allLink, markStop, startTime, siteRepository, pageRepository, lemmaRepository, indexObjectRepository, stopObjectRepository);
                                 initializationOfEntityFields.initialisationPage(site, absUrl.get(i), response.statusCode(), doc);
                                 html.fork();
                                 tasks.add(html);
@@ -114,6 +114,7 @@ public class ParseHtml extends RecursiveTask<ArrayList<String>> {
         for (String s : name) {
             name2.add(s);
         }
+            initializationOfEntityFields.initialisationStopObject(site, stoppingList);
         return name2;
     }
 }

@@ -8,13 +8,12 @@ import searchengine.dto.parsing.MarkStop;
 import searchengine.dto.parsing.ParseHtml;
 import searchengine.dto.parsing.RequestStartTime;
 import searchengine.model.Site;
-import searchengine.repository.IndexObjectRepository;
-import searchengine.repository.LemmaRepository;
-import searchengine.repository.PageRepository;
-import searchengine.repository.SiteRepository;
+import searchengine.model.Status;
+import searchengine.repository.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.ForkJoinPool;
@@ -30,14 +29,16 @@ public class RepositoryService {
     private PageRepository pageRepository;
     private LemmaRepository lemmaRepository;
     private IndexObjectRepository indexObjectRepository;
+    private StopObjectRepository stopObjectRepository;
 
     @Autowired
-    public RepositoryService(SitesList sites, SiteRepository siteRepository, PageRepository pageRepository, LemmaRepository lemmaRepository, IndexObjectRepository indexObjectRepository) {
+    public RepositoryService(SitesList sites, SiteRepository siteRepository, PageRepository pageRepository, LemmaRepository lemmaRepository, IndexObjectRepository indexObjectRepository, StopObjectRepository stopObjectRepository) {
         this.sites = sites;
         this.siteRepository = siteRepository;
         this.pageRepository = pageRepository;
         this.lemmaRepository = lemmaRepository;
         this.indexObjectRepository = indexObjectRepository;
+        this.stopObjectRepository = stopObjectRepository;
     }
 
     public List<String> initialisationArrayPath() {
@@ -68,10 +69,20 @@ public class RepositoryService {
     }
 
     public void InitialisationIndexing(String pathHtml, MarkStop markStop) throws IOException {
-            RequestStartTime startTime = new RequestStartTime();
-            ParseHtml parseHtml = new ParseHtml(normalisePathParent(pathHtml), normalisePathParent(pathHtml), allLink, markStop, startTime, siteRepository, pageRepository, lemmaRepository, indexObjectRepository);
-            ArrayList<String> url = new ForkJoinPool().invoke(parseHtml);
+        Site site = new Site();
+        RequestStartTime startTime = new RequestStartTime();
+        String path = normalisePathParent(pathHtml);
+        site.setUrl(path);
+        site.setStatusTime(new Date());
+        site.setStatus(Status.INDEXING);
+        ParseHtml parseHtml = new ParseHtml(site, path, path, allLink, markStop, startTime, siteRepository, pageRepository, lemmaRepository, indexObjectRepository, stopObjectRepository);
+        ArrayList<String> url = new ForkJoinPool().invoke(parseHtml);
+        Site siteIndexed = siteRepository.findById(siteRepository.findIdByUrl(path));
+        siteIndexed.setStatus(Status.INDEXED);
+        siteIndexed.setStatusTime(new Date());
+        siteRepository.save(siteIndexed);
     }
+
     private String normalisePathParent(String pathParent) {
         String string = pathParent.replaceAll("www.", "");
         if (string.charAt(string.length() - 1) != '/') {

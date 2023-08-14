@@ -32,4 +32,7 @@ public class Site {
     @OneToMany(mappedBy = "site", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Lemma> lemmas = new ArrayList<>();
 
+    @OneToMany(mappedBy = "site", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<StopObject> stopObjects = new ArrayList<>();
+
 }

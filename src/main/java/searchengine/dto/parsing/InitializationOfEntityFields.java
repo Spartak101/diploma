@@ -4,10 +4,7 @@ import lombok.Data;
 import org.jsoup.nodes.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import searchengine.model.*;
-import searchengine.repository.IndexObjectRepository;
-import searchengine.repository.LemmaRepository;
-import searchengine.repository.PageRepository;
-import searchengine.repository.SiteRepository;
+import searchengine.repository.*;
 import searchengine.services.RepositoryService;
 
 import java.util.*;
@@ -19,29 +16,26 @@ public class InitializationOfEntityFields {
     private PageRepository pageRepository;
     private LemmaRepository lemmaRepository;
     private IndexObjectRepository indexObjectRepository;
+    private StopObjectRepository stopObjectRepository;
 
-    public InitializationOfEntityFields(SiteRepository siteRepository, PageRepository pageRepository, LemmaRepository lemmaRepository, IndexObjectRepository indexObjectRepository) {
+    public InitializationOfEntityFields(SiteRepository siteRepository, PageRepository pageRepository, LemmaRepository lemmaRepository, IndexObjectRepository indexObjectRepository, StopObjectRepository stopObjectRepository) {
         this.siteRepository = siteRepository;
         this.pageRepository = pageRepository;
         this.lemmaRepository = lemmaRepository;
         this.indexObjectRepository = indexObjectRepository;
+        this.stopObjectRepository = stopObjectRepository;
     }
 
-    protected Site initialisationSite(String pathParent, int httpStatusCode, Document doc) {
-        Site site = new Site();
+    protected Site initialisationSite(Site site, int httpStatusCode, Document doc) {
         switch (httpStatusCode) {
             case 200 -> {
-                site.setStatus(Status.INDEXING);
-                site.setStatusTime(new Date());
                 site.setLastError(HttpStatusCodeError.httpStatusCodeError(httpStatusCode));
-                site.setUrl(pathParent);
                 site.setName(SiteName.siteName(doc));
             }
             default -> {
                 site.setStatus(Status.FAILED);
                 site.setStatusTime(new Date());
                 site.setLastError(HttpStatusCodeError.httpStatusCodeError(httpStatusCode));
-                site.setUrl(pathParent);
                 site.setName("");
             }
         }
@@ -56,6 +50,8 @@ public class InitializationOfEntityFields {
         page.setContent(String.valueOf(doc));
         String path = pathHtml.replaceAll(site.getUrl(), "");
         page.setPath(path);
+        site.setStatusTime(new Date());
+        siteRepository.save(site);
         page.setSite(site);
         pageRepository.save(page);
         System.out.println("save page " + path + " for site " + site.getUrl());
@@ -83,5 +79,17 @@ public class InitializationOfEntityFields {
         indexObject.setRunk((float) rank);
         indexObjectRepository.save(indexObject);
 
+    }
+
+    protected void initialisationStopObject(Site site, ArrayList<String> list) {
+        stopObjectRepository.deleteAll();
+        ArrayList<StopObject> stopObjectsArray = new ArrayList<>();
+        for (String s : list) {
+            StopObject stopObject = new StopObject();
+            stopObject.setSite(site);
+            stopObject.setPathHtml(s);
+            stopObjectsArray.add(stopObject);
+        }
+        stopObjectRepository.saveAll(stopObjectsArray);
     }
 }
