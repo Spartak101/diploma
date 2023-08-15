@@ -66,7 +66,7 @@ public class LemmasOfPage {
         try {
             string = lemmas.get(0).getMorphology().toString();
             switch (string) {
-                case "МЕЖД", "СОЮЗ", "ПРЕДЛ", "ЧАСТ":
+                case "[МЕЖД]", "[СОЮЗ]", "[ПРЕДЛ]", "[ЧАСТ]":
                     System.out.println("lemma false  " + string);
                     return false;
                 default:

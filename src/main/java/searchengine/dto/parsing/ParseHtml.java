@@ -69,11 +69,16 @@ public class ParseHtml extends RecursiveTask<ArrayList<String>> {
     protected ArrayList<String> compute() {
         HashSet<String> name = allLink;
         ArrayList<String> name2 = new ArrayList<>();
-        ArrayList<String> stoppingList = new ArrayList<>();
+//        ArrayList<String> stoppingList = new ArrayList<>();
         ArrayList<ParseHtml> tasks = new ArrayList<>();
         if (name.isEmpty()) {
             initializationOfEntityFields.initialisationSite(site, response.statusCode(), doc);
             initializationOfEntityFields.initialisationPage(site, pathParent, response.statusCode(), doc);
+            try {
+                Thread.sleep(5000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
             System.out.println("Initialisation " + pathParent);
         }
         if (absUrl == null) {
@@ -97,7 +102,9 @@ public class ParseHtml extends RecursiveTask<ArrayList<String>> {
                                 html.fork();
                                 tasks.add(html);
                             } else {
-                                stoppingList.add(absUrl.get(i));
+//                                stoppingList.add(absUrl.get(i));
+                                initializationOfEntityFields.initialisationStopObject(site, absUrl.get(i));
+                                Thread.sleep(100);
                             }
                         } catch (IOException e) {
                             throw new RuntimeException(e);
@@ -114,7 +121,12 @@ public class ParseHtml extends RecursiveTask<ArrayList<String>> {
         for (String s : name) {
             name2.add(s);
         }
-            initializationOfEntityFields.initialisationStopObject(site, stoppingList);
+
         return name2;
+    }
+
+    public ParseHtml initializationOfAbsurl(ArrayList<String> pathArray){
+        this.absUrl.addAll(pathArray);
+        return null;
     }
 }

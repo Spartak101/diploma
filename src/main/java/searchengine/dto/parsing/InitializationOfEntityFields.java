@@ -81,15 +81,16 @@ public class InitializationOfEntityFields {
 
     }
 
-    protected void initialisationStopObject(Site site, ArrayList<String> list) {
-        stopObjectRepository.deleteAll();
-        ArrayList<StopObject> stopObjectsArray = new ArrayList<>();
-        for (String s : list) {
+    protected void initialisationStopObject(Site site, String path) {
+//        stopObjectRepository.deleteAll();
+//        ArrayList<StopObject> stopObjectsArray = new ArrayList<>();
+//        for (String s : list) {
             StopObject stopObject = new StopObject();
             stopObject.setSite(site);
-            stopObject.setPathHtml(s);
-            stopObjectsArray.add(stopObject);
-        }
-        stopObjectRepository.saveAll(stopObjectsArray);
+            stopObject.setPathHtml(path);
+            stopObjectRepository.save(stopObject);
+//            stopObjectsArray.add(stopObject);
+//        }
+//        stopObjectRepository.saveAll(stopObjectsArray);
     }
 }

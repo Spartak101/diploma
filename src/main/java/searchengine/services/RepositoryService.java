@@ -24,7 +24,6 @@ import java.util.stream.Collectors;
 public class RepositoryService {
     private SitesList sites;
     private MarkStop markStop;
-    private HashSet<String> allLink = new HashSet<>();
     private SiteRepository siteRepository;
     private PageRepository pageRepository;
     private LemmaRepository lemmaRepository;
@@ -42,11 +41,12 @@ public class RepositoryService {
     }
 
     public List<String> initialisationArrayPath() {
+        HashSet<String> urlMap = new HashSet<>();
         List<String> urlList = new ArrayList<>();
         List<Site> listDB = new ArrayList<>();
         try {
             listDB = siteRepository.findAll();
-            listDB.forEach(System.out::println);
+            listDB.forEach(site -> System.out.println(site.getUrl()));
         } catch (Exception ex) {
             // ex.printStackTrace();
             System.out.println("База данных пуста!");
@@ -54,33 +54,41 @@ public class RepositoryService {
         if (!listDB.isEmpty()) {
             for (Site s : listDB) {
                 for (searchengine.config.Site t : sites.getSites()) {
-                    if (s.getStatus().toString() == "INDEXING" | s.getUrl() != t.getUrl()) {
-                        urlList.add(t.getUrl());
+                    if (s.getStatus().toString() == "INDEXING" | s.getUrl() != normalisePathParent(t.getUrl())) {
+                        urlMap.add(normalisePathParent(t.getUrl()));
                     }
                 }
             }
+            urlList = urlMap.stream().toList();
         } else {
             urlList = sites.getSites().stream().map(Site -> Site.getUrl()).collect(Collectors.toList());
         }
-        for (String s : urlList) {
-            System.out.println("init " + s);
-        }
+        urlList.forEach(System.out::println);
         return urlList;
     }
 
     public void InitialisationIndexing(String pathHtml, MarkStop markStop) throws IOException {
         Site site = new Site();
-        RequestStartTime startTime = new RequestStartTime();
         String path = normalisePathParent(pathHtml);
-        site.setUrl(path);
-        site.setStatusTime(new Date());
-        site.setStatus(Status.INDEXING);
+        try {
+            site = siteRepository.findByUrl(pathHtml);
+        } catch (Exception e) {
+            site.setUrl(path);
+            site.setStatusTime(new Date());
+            site.setStatus(Status.INDEXING);
+        }
+        RequestStartTime startTime = new RequestStartTime();
+        ArrayList<String> absUrl = stopObjectRepository.findAllBySite_Id(site.getId());
+        HashSet<String> allLink = (HashSet<String>) site.getPages().stream().map(page -> path + page.getPath()).collect(Collectors.toSet());
         ParseHtml parseHtml = new ParseHtml(site, path, path, allLink, markStop, startTime, siteRepository, pageRepository, lemmaRepository, indexObjectRepository, stopObjectRepository);
+        parseHtml.initializationOfAbsurl(absUrl);
         ArrayList<String> url = new ForkJoinPool().invoke(parseHtml);
-        Site siteIndexed = siteRepository.findById(siteRepository.findIdByUrl(path));
-        siteIndexed.setStatus(Status.INDEXED);
-        siteIndexed.setStatusTime(new Date());
-        siteRepository.save(siteIndexed);
+        if (!markStop.isMarkStop()) {
+            Site siteIndexed = siteRepository.findByUrl(path);
+            siteIndexed.setStatus(Status.INDEXED);
+            siteIndexed.setStatusTime(new Date());
+            siteRepository.save(siteIndexed);
+        }
     }
 
     private String normalisePathParent(String pathParent) {
