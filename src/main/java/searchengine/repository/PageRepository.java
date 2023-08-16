@@ -15,4 +15,7 @@ public interface PageRepository extends JpaRepository<Page, Integer> {
     @Query(value = "SELECT path FROM search_engine.page WHERE site_id = ?1",
             nativeQuery = true)
     ArrayList<String> findPathBySite_id(int site_id);
+    @Query(value = "SELECT * FROM search_engine.page WHERE site_id = ?1 and path = ?2",
+            nativeQuery = true)
+    Page findBySite_idAndPath(int site_id, String path);
 }

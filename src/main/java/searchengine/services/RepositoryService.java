@@ -1,12 +1,16 @@
 package searchengine.services;
 
 import lombok.Getter;
+import org.jsoup.Connection;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import searchengine.config.SitesList;
 import searchengine.dto.parsing.MarkStop;
 import searchengine.dto.parsing.ParseHtml;
 import searchengine.dto.parsing.RequestStartTime;
+import searchengine.model.Page;
 import searchengine.model.Site;
 import searchengine.model.Status;
 import searchengine.repository.*;
@@ -70,8 +74,8 @@ public class RepositoryService {
     public void InitialisationIndexing(String pathHtml, MarkStop markStop) throws IOException {
         Site site;
         String path = normalisePathParent(pathHtml);
-            site = siteRepository.findByUrl(pathHtml);
-         if(site == null) {
+        site = siteRepository.findByUrl(pathHtml);
+        if (site == null) {
             site = new Site();
             site.setUrl(path);
             site.setStatusTime(new Date());
@@ -114,4 +118,35 @@ public class RepositoryService {
         }
         return pathSet;
     }
+
+    public boolean pageRefresh(String url) throws IOException {
+        String pathHtml = url.replaceAll("https?:\\/\\/\\w+\\.\\w+\\/", "");
+        String pathParent = url.replaceAll(pathHtml, "");
+        Site site = siteRepository.findByUrl(pathParent);
+        Connection.Response response;
+        if (site == null) {
+            return false;
+        } else {
+            response = Jsoup.connect(pathParent).followRedirects(true).execute();
+            Document doc = Jsoup.connect(url)
+                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36")
+                    .referrer("http://www.google.com")
+                    .get();
+            System.out.println("1-200 " + url);
+            Page page = pageRepository.findBySite_idAndPath(site.getId(), pathParent);
+            if (page != null) {
+                page.setContent(String.valueOf(doc));
+                pageRepository.save(page);
+            } else {
+                page = new Page();
+                page.setSite(site);
+                page.setCode(response.statusCode());
+                page.setContent(String.valueOf(doc));
+                page.setPath(pathHtml);
+                pageRepository.save(page);
+            }
+            return true;
+        }
+    }
 }
+

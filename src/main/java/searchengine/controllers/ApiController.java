@@ -70,7 +70,7 @@ public class ApiController {
                     throw new RuntimeException(e);
                 }
             }).start();
-                    }
+        }
         return ResponseEntity.ok().body("{\n" +
                 "\"result\": \"true\"\n" +
                 "}");
@@ -90,19 +90,19 @@ public class ApiController {
                 "}");
     }
 
-    @PostMapping("/api/indexPage/")
-    public Object updatePage(String url) {
-        return null;
+    @PostMapping("/indexPage")
+    public ResponseEntity updatePage(String url) throws IOException {
+        if (repositoryService.pageRefresh(url)) {
+            return ResponseEntity.ok().body("{\n" +
+                    "\"result\": \"true\"\n" +
+                    "}");
+        } else {
+            return ResponseEntity.badRequest().body("{\n" +
+                    "\"result\": \"false\"\n" +
+                    "\"error\": \"Данная страница находится за пределами индексированных сайтов\"\n" +
+                    "}");
+        }
     }
 
-//    private boolean IsTheClassRunning(String className) {
-//        Stream<String> stream = Arrays.stream(Thread.currentThread().getStackTrace()).map(stackTraceElement -> stackTraceElement.getClassName().toString());
-//        Object[] arrayClassInThread = stream.toArray();
-//        for (int i = 0; i < arrayClassInThread.length - 1; i++) {
-//            if (arrayClassInThread[i].toString().equals(className)) {
-//                return true;
-//            }
-//        }
-//        return false;
-//    }
+
 }
