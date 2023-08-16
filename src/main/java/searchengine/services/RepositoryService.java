@@ -68,20 +68,24 @@ public class RepositoryService {
     }
 
     public void InitialisationIndexing(String pathHtml, MarkStop markStop) throws IOException {
-        Site site = new Site();
+        Site site;
         String path = normalisePathParent(pathHtml);
-        try {
             site = siteRepository.findByUrl(pathHtml);
-        } catch (Exception e) {
+         if(site == null) {
+            site = new Site();
             site.setUrl(path);
             site.setStatusTime(new Date());
             site.setStatus(Status.INDEXING);
         }
         RequestStartTime startTime = new RequestStartTime();
-        ArrayList<String> absUrl = stopObjectRepository.findAllBySite_Id(site.getId());
-        HashSet<String> allLink = (HashSet<String>) site.getPages().stream().map(page -> path + page.getPath()).collect(Collectors.toSet());
-        ParseHtml parseHtml = new ParseHtml(site, path, path, allLink, markStop, startTime, siteRepository, pageRepository, lemmaRepository, indexObjectRepository, stopObjectRepository);
-        parseHtml.initializationOfAbsurl(absUrl);
+        HashSet<String> absUrl = new HashSet<>();
+        HashSet<String> allLink = new HashSet<>();
+        if (site.getId() != 0) {
+            absUrl.addAll(stopObjectRepository.findAllBySite_Id(site.getId()));
+            stopObjectRepository.deleteAllBySite_id(site.getId());
+            allLink = pathToThePageFromBD(path);
+        }
+        ParseHtml parseHtml = new ParseHtml(absUrl, site, path, path, allLink, markStop, startTime, siteRepository, pageRepository, lemmaRepository, indexObjectRepository, stopObjectRepository);
         ArrayList<String> url = new ForkJoinPool().invoke(parseHtml);
         if (!markStop.isMarkStop()) {
             Site siteIndexed = siteRepository.findByUrl(path);
@@ -97,5 +101,17 @@ public class RepositoryService {
             return string + "/";
         }
         return string;
+    }
+
+    private HashSet<String> pathToThePageFromBD(String pathHtml) {
+        HashSet<String> pathSet = new HashSet<>();
+        Site site = siteRepository.findByUrl(pathHtml);
+        int siteId = site.getId();
+        String siteUrl = site.getUrl();
+        ArrayList<String> pagePath = pageRepository.findPathBySite_id(siteId);
+        for (String s : pagePath) {
+            pathSet.add(siteUrl + s);
+        }
+        return pathSet;
     }
 }

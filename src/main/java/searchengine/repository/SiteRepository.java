@@ -13,9 +13,4 @@ public interface SiteRepository extends JpaRepository<Site, Integer> {
    Site findById(int idSite);
 
    Site findByUrl(String path);
-
-//   @Query(value = "SELECT id FROM search_engine.page WHERE path = ?1",
-//           nativeQuery = true)
-//   int findIdByPath(String pathHtml);
-
 }
