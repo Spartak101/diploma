@@ -9,7 +9,7 @@ import lombok.Setter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-
+// @Data не ставить, вызывает stackOverflowException
 @Entity
 @Getter
 @Setter

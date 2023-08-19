@@ -2,13 +2,14 @@ spring.datasource.url: jdbc:mysql://localhost:3306/search_engine?useSSL=false&re
 spring.datasource.username: root
 spring.datasource.password: testtest
 spring.jpa.hibernate.ddl-auto: update
-#spring.jpa.hibernate.order_inserts: true
+spring.jpa.hibernate.order_inserts: true
+#spring.jpa.properties.hibernate.batch_versioned_data: true
 #spring.jpa.hibernate.jdbc.batch_size: 100
 spring.jpa.show-sql: false
 spring.thymeleaf.cache: false
 spring.main.banner-mode: off
   
-logging.file.name: logs/app.log
+logging.file.name: logs/app1.log
 logging.level.org.springframework.web: INFO
 logging.level.root: INFO
 logging.file.max-size: 1MB

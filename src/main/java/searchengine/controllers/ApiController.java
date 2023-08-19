@@ -8,9 +8,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import searchengine.config.SitesList;
 import searchengine.dto.parsing.MarkStop;
+import searchengine.dto.response.Bad;
+import searchengine.dto.response.Ok;
+import searchengine.dto.response.ResponseObjectIndexing;
 import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.model.Site;
 import searchengine.services.RepositoryService;
+import searchengine.services.ResponseService;
 import searchengine.services.StatisticsService;
 
 import java.io.IOException;
@@ -27,13 +31,15 @@ public class ApiController {
     private final SitesList sites;
 
     private RepositoryService repositoryService;
+    private ResponseService responseService;
 
     private final StatisticsService statisticsService;
 
-    public ApiController(SitesList sites, StatisticsService statisticsService, RepositoryService repositoryService) {
+    public ApiController(SitesList sites, StatisticsService statisticsService, RepositoryService repositoryService, ResponseService responseService) {
         this.sites = sites;
         this.statisticsService = statisticsService;
         this.repositoryService = repositoryService;
+        this.responseService = responseService;
     }
 
     @GetMapping("/statistics")
@@ -52,12 +58,9 @@ public class ApiController {
     }
 
     @GetMapping("/startIndexing")
-    public ResponseEntity startIndexing() throws IOException {
+    public ResponseEntity<ResponseObjectIndexing> startIndexing() throws IOException {
         if (!markStop.isMarkStop()) {
-            return ResponseEntity.badRequest().body("{\n" +
-                    "\"result\": \"false\",\n" +
-                    "\"error\": \"Индексация уже запущена\"\n" +
-                    "}");
+            return ResponseEntity.badRequest().body(new ResponseObjectIndexing(false, "Индексация уже запущена"));
         }
         markStop.setMarkStop(false);
         List<String> list = repositoryService.initialisationArrayPath();
@@ -71,38 +74,38 @@ public class ApiController {
                 }
             }).start();
         }
-        return ResponseEntity.ok().body("{\n" +
-                "\"result\": \"true\"\n" +
-                "}");
+        return ResponseEntity.ok().body(new ResponseObjectIndexing(true, ""));
     }
 
     @GetMapping("/stopIndexing")
-    public ResponseEntity stopIndexing() {
+    public ResponseEntity<ResponseObjectIndexing> stopIndexing() {
         if (!markStop.isMarkStop()) {
             markStop.setMarkStop(true);
-            return ResponseEntity.ok().body("{\n" +
-                    "\"result\": \"true\"\n" +
-                    "}");
+            return ResponseEntity.ok().body(new ResponseObjectIndexing(true, ""));
         }
-        return ResponseEntity.badRequest().body("{\n" +
-                "\"result\": \"false\",\n" +
-                "\"error\": \"Индексация не запущена\"\n" +
-                "}");
+        return ResponseEntity.badRequest().body(new ResponseObjectIndexing(false, "Индексация не запущена"));
     }
 
     @PostMapping("/indexPage")
-    public ResponseEntity updatePage(String url) throws IOException {
+    public ResponseEntity<ResponseObjectIndexing> updatePage(String url) throws IOException {
         if (repositoryService.pageRefresh(url)) {
-            return ResponseEntity.ok().body("{\n" +
-                    "\"result\": \"true\"\n" +
-                    "}");
+            return ResponseEntity.ok().body(new ResponseObjectIndexing(true, ""));
         } else {
-            return ResponseEntity.badRequest().body("{\n" +
-                    "\"result\": \"false\"\n" +
-                    "\"error\": \"Данная страница находится за пределами индексированных сайтов\"\n" +
-                    "}");
+            return ResponseEntity.badRequest().body(new ResponseObjectIndexing(false, "Данная страница находится за пределами индексированных сайтов"));
         }
     }
 
+    @GetMapping("/search")
+    public ResponseEntity<Object> search(String query, int offset, int limit, String site) {
+        System.out.println(query + "\n"
+        + offset + "\n"
+        + limit + "\n"
+        + site);
+        if (responseService.queryIsEmpty(query)){
+            System.out.println("Bad");
+            return ResponseEntity.badRequest().body(new Ok());
+        }
 
+        return ResponseEntity.ok().body(responseService.searchResponce(query, offset, limit, site));
+    }
 }

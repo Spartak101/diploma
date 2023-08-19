@@ -5,8 +5,10 @@ import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.github.demidko.aot.WordformMeaning.lookupForMeanings;
 
@@ -24,12 +26,11 @@ public class LemmasOfPage {
         HashMap<String, Integer> lemmas = new HashMap<>();
         for (int i = 1; i < 7; i++) {
             Elements headings = doc.select("h" + i);
-            lemmas.putAll(countLemmas(stringsForLemmas(headings), lemmas));
+            lemmas.putAll(countLemmas(stringsForLemmas(headings.text()), lemmas));
         }
-        lemmas.putAll(countLemmas(stringsForLemmas(elementLinks), lemmas));
-        lemmas.putAll(countLemmas(stringsForLemmas(elementSpan), lemmas));
-        lemmas.putAll(countLemmas(stringsForLemmas(elementParagraph), lemmas));
-//        lemmas.forEach((key, value) -> System.out.println(key + " " + value));
+        lemmas.putAll(countLemmas(stringsForLemmas(elementLinks.text()), lemmas));
+        lemmas.putAll(countLemmas(stringsForLemmas(elementSpan.text()), lemmas));
+        lemmas.putAll(countLemmas(stringsForLemmas(elementParagraph.text()), lemmas));
         return lemmas;
     }
 
@@ -42,22 +43,15 @@ public class LemmasOfPage {
                 lemmas.put(s, countLemmas + 1);
             }
         }
-//        lemmas.forEach((key, value) -> System.out.println("countLemmas  " + key + " " + value));
         return lemmas;
     }
 
-    public ArrayList<String> stringsForLemmas(Elements elements) {
-        String string = elements.text();
+    public ArrayList<String> stringsForLemmas(String string) {
         String[] strings = string.split("[^а-яА-Я]+");
-        ArrayList<String> arrayList = new ArrayList<>();
-        for (String str : strings) {
-            List<WordformMeaning> lemmas = lookupForMeanings(str);
-            if (superfluousStrings(lemmas)) {
-                arrayList.add(String.valueOf(lemmas.get(0).getLemma()));
-//                System.out.println("stringsForLemmas  " + String.valueOf(lemmas.get(0).getLemma()));
-            }
-        }
-//        arrayList.forEach(System.out::println);
+        ArrayList<String> arrayList = Arrays.stream(strings)
+                .map(WordformMeaning::lookupForMeanings)
+                .filter(this::superfluousStrings).map(lemmas -> String.valueOf(lemmas.get(0).getLemma()))
+                .collect(Collectors.toCollection(ArrayList::new));
         return arrayList;
     }
 
@@ -67,10 +61,8 @@ public class LemmasOfPage {
             string = lemmas.get(0).getMorphology().toString();
             switch (string) {
                 case "[МЕЖД]", "[СОЮЗ]", "[ПРЕДЛ]", "[ЧАСТ]":
-//                    System.out.println("lemma false  " + string);
                     return false;
                 default:
-//                System.out.println("lemma true  " + string);
                     return true;
             }
         } catch (Exception ex) {

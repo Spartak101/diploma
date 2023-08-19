@@ -13,6 +13,7 @@ import searchengine.dto.parsing.RequestStartTime;
 import searchengine.model.Page;
 import searchengine.model.Site;
 import searchengine.model.Status;
+import searchengine.model.StopObject;
 import searchengine.repository.*;
 
 import java.io.IOException;
@@ -27,7 +28,7 @@ import java.util.stream.Collectors;
 @Getter
 public class RepositoryService {
     private SitesList sites;
-    private MarkStop markStop;
+    private MarkStop markStop = new MarkStop();
     private SiteRepository siteRepository;
     private PageRepository pageRepository;
     private LemmaRepository lemmaRepository;
@@ -46,13 +47,11 @@ public class RepositoryService {
 
     public List<String> initialisationArrayPath() {
         HashSet<String> urlMap = new HashSet<>();
-        List<String> urlList = new ArrayList<>();
+        List<String> urlList;
         List<Site> listDB = new ArrayList<>();
         try {
             listDB = siteRepository.findAll();
-            listDB.forEach(site -> System.out.println(site.getUrl()));
         } catch (Exception ex) {
-            // ex.printStackTrace();
             System.out.println("База данных пуста!");
         }
         if (!listDB.isEmpty()) {
@@ -86,11 +85,12 @@ public class RepositoryService {
         HashSet<String> allLink = new HashSet<>();
         if (site.getId() != 0) {
             absUrl.addAll(stopObjectRepository.findAllBySite_Id(site.getId()));
-            stopObjectRepository.deleteAllBySite_id(site.getId());
+            ArrayList<StopObject> arrayList = stopObjectRepository.findAllBySite_id(site.getId());
+            stopObjectRepository.deleteAll(arrayList);
             allLink = pathToThePageFromBD(path);
         }
         ParseHtml parseHtml = new ParseHtml(absUrl, site, path, path, allLink, markStop, startTime, siteRepository, pageRepository, lemmaRepository, indexObjectRepository, stopObjectRepository);
-        ArrayList<String> url = new ForkJoinPool().invoke(parseHtml);
+        new ForkJoinPool().invoke(parseHtml);
         if (!markStop.isMarkStop()) {
             Site siteIndexed = siteRepository.findByUrl(path);
             siteIndexed.setStatus(Status.INDEXED);
@@ -133,10 +133,11 @@ public class RepositoryService {
                     .referrer("http://www.google.com")
                     .get();
             System.out.println("1-200 " + url);
-            Page page = pageRepository.findBySite_idAndPath(site.getId(), pathParent);
+            System.out.println(response.statusCode());
+            System.out.println(response.statusMessage());
+            Page page = pageRepository.findBySite_idAndPath(site.getId(), pathHtml);
             if (page != null) {
-                page.setContent(String.valueOf(doc));
-                pageRepository.save(page);
+                pageRepository.updateContentPage(page.getId(), String.valueOf(doc));
             } else {
                 page = new Page();
                 page.setSite(site);
