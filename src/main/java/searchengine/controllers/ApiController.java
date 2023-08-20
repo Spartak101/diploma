@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import searchengine.config.SitesList;
 import searchengine.dto.parsing.MarkStop;
-import searchengine.dto.response.Bad;
 import searchengine.dto.response.Ok;
 import searchengine.dto.response.ResponseObjectIndexing;
 import searchengine.dto.statistics.StatisticsResponse;
@@ -19,9 +18,7 @@ import searchengine.services.StatisticsService;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Stream;
 
 @RestController
 @RequestMapping("/api")

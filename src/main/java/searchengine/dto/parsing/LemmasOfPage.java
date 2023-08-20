@@ -19,6 +19,9 @@ public class LemmasOfPage {
         this.doc = doc;
     }
 
+    public LemmasOfPage() {
+    }
+
     public HashMap<String, Integer> lemmas() {
         Elements elementLinks = doc.select("a");
         Elements elementSpan = doc.select("span");

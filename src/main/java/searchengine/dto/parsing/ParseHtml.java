@@ -67,7 +67,7 @@ public class ParseHtml extends RecursiveTask<ArrayList<String>> {
     @Override
     protected ArrayList<String> compute() {
         HashSet<String> name = allLink;
-        ArrayList<String> name2 = new ArrayList<>();
+        ArrayList<String> name2;
         ArrayList<ParseHtml> tasks = new ArrayList<>();
         if (name.isEmpty()) {
             initializationOfEntityFields.initialisationSite(site, response.statusCode(), doc);

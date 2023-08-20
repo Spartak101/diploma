@@ -3,6 +3,9 @@ package searchengine.model;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.util.ArrayList;
+import java.util.List;
+
 
 @Entity
 @Data
@@ -22,5 +25,6 @@ public class Page {
     @Column(columnDefinition = "MEDIUMTEXT", nullable = false)
     private String content;
 
-
+    @OneToMany(mappedBy = "page", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<IndexObject> indexObjects = new ArrayList<>();
 }

@@ -67,8 +67,13 @@ public class InitializationOfEntityFields {
             lemma.setSite(site);
             lemma.setLemma(s);
             lemma.setFrequency(1);
-            lemmaRepository.save(lemma);
-            initialisationIndex(lemma, page, lemmas.get(s));
+            Lemma lemmaDB = lemmaRepository.findByLemmaAndSite_id(s, site.getId());
+            if (lemmaDB == null) {
+                lemmaRepository.save(lemma);
+                initialisationIndex(lemma, page, lemmas.get(s));
+            } else {
+                lemmaRepository.updateContentLemma(lemmaDB.getId());
+            }
         }
     }
 
@@ -85,10 +90,10 @@ public class InitializationOfEntityFields {
 //        stopObjectRepository.deleteAll();
 //        ArrayList<StopObject> stopObjectsArray = new ArrayList<>();
 //        for (String s : list) {
-            StopObject stopObject = new StopObject();
-            stopObject.setSite(site);
-            stopObject.setPathHtml(path);
-            stopObjectRepository.save(stopObject);
+        StopObject stopObject = new StopObject();
+        stopObject.setSite(site);
+        stopObject.setPathHtml(path);
+        stopObjectRepository.save(stopObject);
 //            stopObjectsArray.add(stopObject);
 //        }
 //        stopObjectRepository.saveAll(stopObjectsArray);
