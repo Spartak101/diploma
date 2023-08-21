@@ -72,11 +72,11 @@ public class ParseHtml extends RecursiveTask<ArrayList<String>> {
         if (name.isEmpty()) {
             initializationOfEntityFields.initialisationSite(site, response.statusCode(), doc);
             initializationOfEntityFields.initialisationPage(site, pathParent, response.statusCode(), doc);
-            try {
-                Thread.sleep(5000);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
+//            try {
+//                Thread.sleep(5000);
+//            } catch (InterruptedException e) {
+//                throw new RuntimeException(e);
+//            }
         }
         if (absUrl == null) {
             return new ArrayList<>();
@@ -105,12 +105,12 @@ public class ParseHtml extends RecursiveTask<ArrayList<String>> {
                             if (!markStop.isMarkStop()) {
                                 html = new ParseHtml(absUrl, site, pathParent, arrayAbsUrl.get(i), allLink, markStop, startTime, siteRepository, pageRepository, lemmaRepository, indexObjectRepository, stopObjectRepository);
                                 initializationOfEntityFields.initialisationPage(site, arrayAbsUrl.get(i), response.statusCode(), doc);
-                                Thread.sleep(100);
+//                                Thread.sleep(100);
                                 html.fork();
                                 tasks.add(html);
                             } else {
                                 initializationOfEntityFields.initialisationStopObject(site, arrayAbsUrl.get(i));
-                                Thread.sleep(10);
+//                                Thread.sleep(10);
                             }
                         } catch (IOException e) {throw new RuntimeException(e);}
                     }

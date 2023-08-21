@@ -51,8 +51,8 @@ public class InitializationOfEntityFields {
         String path = pathHtml.replaceAll(site.getUrl(), "");
         page.setPath(path);
         site.setStatusTime(new Date());
-        siteRepository.save(site);
         page.setSite(site);
+        siteRepository.save(site);
         pageRepository.save(page);
         System.out.println("save page " + path + " for site " + site.getUrl());
         initialisationLemmas(doc, site, page);
@@ -73,6 +73,7 @@ public class InitializationOfEntityFields {
                 initialisationIndex(lemma, page, lemmas.get(s));
             } else {
                 lemmaRepository.updateContentLemma(lemmaDB.getId());
+                initialisationIndex(lemmaDB, page, lemmas.get(s));
             }
         }
     }
@@ -83,19 +84,13 @@ public class InitializationOfEntityFields {
         indexObject.setLemma(lemma);
         indexObject.setRunk((float) rank);
         indexObjectRepository.save(indexObject);
-
     }
 
     protected void initialisationStopObject(Site site, String path) {
-//        stopObjectRepository.deleteAll();
-//        ArrayList<StopObject> stopObjectsArray = new ArrayList<>();
-//        for (String s : list) {
         StopObject stopObject = new StopObject();
         stopObject.setSite(site);
         stopObject.setPathHtml(path);
         stopObjectRepository.save(stopObject);
-//            stopObjectsArray.add(stopObject);
-//        }
-//        stopObjectRepository.saveAll(stopObjectsArray);
+
     }
 }

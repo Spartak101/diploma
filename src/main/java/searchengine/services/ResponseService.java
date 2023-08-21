@@ -40,7 +40,7 @@ public class ResponseService {
             return ok;
         }
         LemmasOfPage lemmasOfPage = new LemmasOfPage();
-        ArrayList<String> arrayLemmasQuery = lemmasOfPage.stringsForLemmas(query);
+        Set<String> arrayLemmasQuery = (Set<String>) lemmasOfPage.stringsForLemmas(query);
         int site_id = siteRepository.findIdByUrl(site);
         ArrayList<String> sortedFrequencyLemmas = frequencyLemmaQuery(arrayLemmasQuery, site_id);
         ArrayList<ResponseObject> responseObjects = ok.getData();
@@ -56,7 +56,7 @@ public class ResponseService {
         return false;
     }
 
-    private ArrayList<String> frequencyLemmaQuery(ArrayList<String> array, int site_id) {
+    private ArrayList<String> frequencyLemmaQuery(Set<String> array, int site_id) {
         HashMap<String, Integer> countLemma = new HashMap<>();
         float allPages;
         if (site_id == 0) {
@@ -79,7 +79,7 @@ public class ResponseService {
                 .collect(Collectors.toList());
     }
 
-    private void collectionAtZero(ArrayList<String> array, HashMap<String, Integer> countLemma) {
+    private void collectionAtZero(Set<String> array, HashMap<String, Integer> countLemma) {
         float allPages;
         for (String s : array) {
             ArrayList<Lemma> lemmas = lemmaRepository.findAllByLemma(s);
@@ -98,11 +98,29 @@ public class ResponseService {
         }
     }
 
-    private ArrayList<ResponseObject> responseObjectArrayList(ArrayList<String> sortedFrequencyLemmas, String site){
+    private ArrayList<ResponseObject> responseObjectArrayList(ArrayList<String> sortedFrequencyLemmas, String site) {
         ArrayList<ResponseObject> array = new ArrayList<>();
-        int lemma_id = lemmaRepository.findAIdByLemma(sortedFrequencyLemmas.get(0));
-//        ArrayList<Integer> pagesId = indexObjectRepository.
-//        LinkedList<Page> pages = pageRepository.findAllById();
+        if (site == null) {
+            LinkedList<Page> pagesOne = pagesWithLemma(sortedFrequencyLemmas.get(0));
+            for (int i = 1; i < sortedFrequencyLemmas.size(); i++) {
+                LinkedList<Page> pagesNext = pagesWithLemma(sortedFrequencyLemmas.get(i));
+                pagesOne.forEach(pagesNext::removeFirstOccurrence);
+            }
+        }
+
+        return null;
+    }
+
+    private LinkedList<Page>  pagesWithLemma(String lemma) {
+        ArrayList<Integer> lemma_id = lemmaRepository.findAllIdByLemma(lemma);
+        ArrayList<Integer> pagesId = indexObjectRepository.findAllByLemma_idIn(lemma_id);
+        LinkedList<Page>  pages = (LinkedList<Page>) pageRepository.findAllById(pagesId);
+        return pages;
+    }
+
+    private LinkedList<Page> lemmaPagesOnTheWebsite(String lemma, String site){
+        int site_id = siteRepository.findIdByUrl(site);
+        ArrayList<Integer> lemma_id = lemmaRepository.findAllIdByLemmaAndSite_id(lemma, site_id);
         return null;
     }
 }

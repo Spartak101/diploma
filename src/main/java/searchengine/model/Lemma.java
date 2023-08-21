@@ -3,6 +3,9 @@ package searchengine.model;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.util.ArrayList;
+import java.util.List;
+
 
 @Entity
 @Data
@@ -18,4 +21,7 @@ public class Lemma {
     private String lemma;
     @Column(columnDefinition = "INT", nullable = false)
     private int frequency;
+
+    @OneToMany(mappedBy = "lemma", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<IndexObject> indexObjects = new ArrayList<>();
 }
