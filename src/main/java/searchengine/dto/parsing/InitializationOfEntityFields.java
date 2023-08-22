@@ -2,10 +2,9 @@ package searchengine.dto.parsing;
 
 import lombok.Data;
 import org.jsoup.nodes.Document;
-import org.springframework.beans.factory.annotation.Autowired;
 import searchengine.model.*;
 import searchengine.repository.*;
-import searchengine.services.RepositoryService;
+import searchengine.services.lemma.LemmaServiceImpl;
 
 import java.util.*;
 
@@ -59,8 +58,8 @@ public class InitializationOfEntityFields {
     }
 
     private void initialisationLemmas(Document doc, Site site, Page page) {
-        LemmasOfPage lemmasOfPage = new LemmasOfPage(doc);
-        HashMap<String, Integer> lemmas = lemmasOfPage.lemmas();
+        LemmaServiceImpl lemmaServiceImpl = new LemmaServiceImpl(doc);
+        HashMap<String, Integer> lemmas = lemmaServiceImpl.lemmas();
         Set<String> lemmasArray = lemmas.keySet();
         for (String s : lemmasArray) {
             Lemma lemma = new Lemma();

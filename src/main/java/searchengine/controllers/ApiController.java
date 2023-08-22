@@ -8,13 +8,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import searchengine.config.SitesList;
 import searchengine.dto.parsing.MarkStop;
-import searchengine.dto.response.Ok;
+import searchengine.dto.response.ResponseSearch;
 import searchengine.dto.response.ResponseObjectIndexing;
 import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.model.Site;
-import searchengine.services.RepositoryService;
-import searchengine.services.ResponseService;
-import searchengine.services.StatisticsService;
+import searchengine.services.indexing.IndexingServiceImpl;
+import searchengine.services.search.SearchServiceImpl;
+import searchengine.services.statistics.StatisticsService;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -27,16 +27,16 @@ public class ApiController {
     private MarkStop markStop = new MarkStop();
     private final SitesList sites;
 
-    private RepositoryService repositoryService;
-    private ResponseService responseService;
+    private IndexingServiceImpl indexingServiceImpl;
+    private SearchServiceImpl searchServiceImpl;
 
     private final StatisticsService statisticsService;
 
-    public ApiController(SitesList sites, StatisticsService statisticsService, RepositoryService repositoryService, ResponseService responseService) {
+    public ApiController(SitesList sites, StatisticsService statisticsService, IndexingServiceImpl indexingServiceImpl, SearchServiceImpl searchServiceImpl) {
         this.sites = sites;
         this.statisticsService = statisticsService;
-        this.repositoryService = repositoryService;
-        this.responseService = responseService;
+        this.indexingServiceImpl = indexingServiceImpl;
+        this.searchServiceImpl = searchServiceImpl;
     }
 
     @GetMapping("/statistics")
@@ -46,7 +46,7 @@ public class ApiController {
 
     @GetMapping("/sites")
     public List<Site> list() {
-        Iterable<Site> siteIterable = repositoryService.getSiteRepository().findAll();
+        Iterable<Site> siteIterable = indexingServiceImpl.getSiteRepository().findAll();
         ArrayList<Site> sites = new ArrayList<>();
         for (Site site : siteIterable) {
             sites.add(site);
@@ -60,12 +60,12 @@ public class ApiController {
             return ResponseEntity.badRequest().body(new ResponseObjectIndexing(false, "Индексация уже запущена"));
         }
         markStop.setMarkStop(false);
-        List<String> list = repositoryService.initialisationArrayPath();
+        List<String> list = indexingServiceImpl.initialisationArrayPath();
         for (int i = 0; i < list.size(); i++) {
             String pathHtml = list.get(i);
             new Thread(() -> {
                 try {
-                    repositoryService.InitialisationIndexing(pathHtml, markStop);
+                    indexingServiceImpl.InitialisationIndexing(pathHtml, markStop);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -85,7 +85,7 @@ public class ApiController {
 
     @PostMapping("/indexPage")
     public ResponseEntity<ResponseObjectIndexing> updatePage(String url) throws IOException {
-        if (repositoryService.pageRefresh(url)) {
+        if (indexingServiceImpl.pageRefresh(url)) {
             return ResponseEntity.ok().body(new ResponseObjectIndexing(true, ""));
         } else {
             return ResponseEntity.badRequest().body(new ResponseObjectIndexing(false, "Данная страница находится за пределами индексированных сайтов"));
@@ -98,11 +98,11 @@ public class ApiController {
         + offset + "\n"
         + limit + "\n"
         + site);
-        if (responseService.queryIsEmpty(query)){
+        if (searchServiceImpl.queryIsEmpty(query)){
             System.out.println("Bad");
-            return ResponseEntity.badRequest().body(new Ok());
+            return ResponseEntity.badRequest().body(new ResponseSearch());
         }
 
-        return ResponseEntity.ok().body(responseService.searchResponce(query, offset, limit, site));
+        return ResponseEntity.ok().body(searchServiceImpl.searchResponce(query, offset, limit, site));
     }
 }

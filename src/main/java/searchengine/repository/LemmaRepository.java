@@ -30,7 +30,6 @@ public interface LemmaRepository extends JpaRepository<Lemma, Integer> {
     ArrayList<Integer> findAllIdByLemma(String lemma);
 
     @Modifying
-    @Transactional
     @Query(value = "UPDATE search_engine.lemma l SET l.frequency = (frequency + 1) WHERE l.id = ?1",
             nativeQuery = true)
     void updateContentLemma(int id);

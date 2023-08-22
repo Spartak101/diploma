@@ -1,12 +1,12 @@
-package searchengine.services;
+package searchengine.services.search;
 
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.util.ArrayUtils;
-import searchengine.dto.parsing.LemmasOfPage;
-import searchengine.dto.response.Ok;
-import searchengine.dto.response.ResponseObject;
+import searchengine.services.lemma.LemmaServiceImpl;
+import searchengine.dto.response.ResponseSearch;
+import searchengine.dto.response.ResponseSearchData;
 import searchengine.model.Lemma;
 import searchengine.model.Page;
 import searchengine.repository.IndexObjectRepository;
@@ -19,35 +19,36 @@ import java.util.stream.Collectors;
 
 @Service
 @Getter
-public class ResponseService {
+public class SearchServiceImpl implements SearchService {
     private SiteRepository siteRepository;
     private PageRepository pageRepository;
     private LemmaRepository lemmaRepository;
     private IndexObjectRepository indexObjectRepository;
 
     @Autowired
-    public ResponseService(SiteRepository siteRepository, PageRepository pageRepository, LemmaRepository lemmaRepository, IndexObjectRepository indexObjectRepository) {
+    public SearchServiceImpl(SiteRepository siteRepository, PageRepository pageRepository, LemmaRepository lemmaRepository, IndexObjectRepository indexObjectRepository) {
         this.siteRepository = siteRepository;
         this.pageRepository = pageRepository;
         this.lemmaRepository = lemmaRepository;
         this.indexObjectRepository = indexObjectRepository;
     }
 
-    public Ok searchResponce(String query, int offset, int limit, String site) {
-        Ok ok = new Ok();
+    @Override
+    public ResponseSearch searchResponce(String query, int offset, int limit, String site) {
+        ResponseSearch responseSearch = new ResponseSearch();
         if (queryIsEmpty(query)) {
-            ok.setError("Задан пустой поисковый запрос");
-            return ok;
+            responseSearch.setError("Задан пустой поисковый запрос");
+            return responseSearch;
         }
-        LemmasOfPage lemmasOfPage = new LemmasOfPage();
-        Set<String> arrayLemmasQuery = (Set<String>) lemmasOfPage.stringsForLemmas(query);
+        LemmaServiceImpl lemmaServiceImpl = new LemmaServiceImpl();
+        Set<String> arrayLemmasQuery = (Set<String>) lemmaServiceImpl.stringsForLemmas(query);
         int site_id = siteRepository.findIdByUrl(site);
         ArrayList<String> sortedFrequencyLemmas = frequencyLemmaQuery(arrayLemmasQuery, site_id);
-        ArrayList<ResponseObject> responseObjects = ok.getData();
+//        ArrayList<ResponseSearchData> responseSearchData = responseSearch.getData();
 
-        return ok;
+        return responseSearch;
     }
-
+    @Override
     public boolean queryIsEmpty(String query) {
         String[] strings = query.split("[^а-яёЁА-Я]");
         if (ArrayUtils.isEmpty(strings)) {
@@ -55,8 +56,8 @@ public class ResponseService {
         }
         return false;
     }
-
-    private ArrayList<String> frequencyLemmaQuery(Set<String> array, int site_id) {
+    @Override
+    public ArrayList<String> frequencyLemmaQuery(Set<String> array, int site_id) {
         HashMap<String, Integer> countLemma = new HashMap<>();
         float allPages;
         if (site_id == 0) {
@@ -78,8 +79,8 @@ public class ResponseService {
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toList());
     }
-
-    private void collectionAtZero(Set<String> array, HashMap<String, Integer> countLemma) {
+    @Override
+    public void collectionAtZero(Set<String> array, HashMap<String, Integer> countLemma) {
         float allPages;
         for (String s : array) {
             ArrayList<Lemma> lemmas = lemmaRepository.findAllByLemma(s);
@@ -97,30 +98,44 @@ public class ResponseService {
             countLemma.put(s, frequencyAll);
         }
     }
-
-    private ArrayList<ResponseObject> responseObjectArrayList(ArrayList<String> sortedFrequencyLemmas, String site) {
-        ArrayList<ResponseObject> array = new ArrayList<>();
+    @Override
+    public ArrayList<ResponseSearchData> responseObjectArrayList(ArrayList<String> sortedFrequencyLemmas, String site) {
+        ArrayList<ResponseSearchData> array = new ArrayList<>();
+        LinkedList<Page> pagesOne;
+        LinkedList<Page> pagesNext;
         if (site == null) {
-            LinkedList<Page> pagesOne = pagesWithLemma(sortedFrequencyLemmas.get(0));
+            pagesOne = pagesWithLemma(sortedFrequencyLemmas.get(0));
             for (int i = 1; i < sortedFrequencyLemmas.size(); i++) {
-                LinkedList<Page> pagesNext = pagesWithLemma(sortedFrequencyLemmas.get(i));
+                pagesNext = pagesWithLemma(sortedFrequencyLemmas.get(i));
                 pagesOne.forEach(pagesNext::removeFirstOccurrence);
             }
         }
-
+        pagesOne = lemmaPagesOnTheWebsite(sortedFrequencyLemmas.get(0), site);
+        for (int i = 1; i < sortedFrequencyLemmas.size(); i++) {
+            pagesNext = lemmaPagesOnTheWebsite(sortedFrequencyLemmas.get(i), site);
+            pagesOne.forEach(pagesNext::removeFirstOccurrence);
+        }
+        ArrayList<String> snippets = snippetGenerator(pagesOne, sortedFrequencyLemmas, site);
         return null;
     }
-
-    private LinkedList<Page>  pagesWithLemma(String lemma) {
+    @Override
+    public LinkedList<Page> pagesWithLemma(String lemma) {
         ArrayList<Integer> lemma_id = lemmaRepository.findAllIdByLemma(lemma);
         ArrayList<Integer> pagesId = indexObjectRepository.findAllByLemma_idIn(lemma_id);
-        LinkedList<Page>  pages = (LinkedList<Page>) pageRepository.findAllById(pagesId);
+        LinkedList<Page> pages = (LinkedList<Page>) pageRepository.findAllById(pagesId);
+        return pages;
+    }
+    @Override
+    public LinkedList<Page> lemmaPagesOnTheWebsite(String lemma, String site) {
+        int site_id = siteRepository.findIdByUrl(site);
+        ArrayList<Integer> lemma_id = lemmaRepository.findAllIdByLemmaAndSite_id(lemma, site_id);
+        ArrayList<Integer> pagesId = indexObjectRepository.findAllByLemma_idIn(lemma_id);
+        LinkedList<Page> pages = (LinkedList<Page>) pageRepository.findAllById(pagesId);
         return pages;
     }
 
-    private LinkedList<Page> lemmaPagesOnTheWebsite(String lemma, String site){
-        int site_id = siteRepository.findIdByUrl(site);
-        ArrayList<Integer> lemma_id = lemmaRepository.findAllIdByLemmaAndSite_id(lemma, site_id);
+    public ArrayList<String> snippetGenerator(LinkedList<Page> pagesList, ArrayList<String> lemmasQuery, String site){
+
         return null;
     }
 }

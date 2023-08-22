@@ -1,8 +1,9 @@
-package searchengine.dto.parsing;
+package searchengine.services.lemma;
 
 import com.github.demidko.aot.WordformMeaning;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
+import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -10,18 +11,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.github.demidko.aot.WordformMeaning.lookupForMeanings;
-
-public class LemmasOfPage {
+@Service
+public class LemmaServiceImpl implements LemmaService {
     private Document doc;
 
-    public LemmasOfPage(Document doc) {
+    public LemmaServiceImpl(Document doc) {
         this.doc = doc;
     }
 
-    public LemmasOfPage() {
+    public LemmaServiceImpl() {
     }
 
+    @Override
     public HashMap<String, Integer> lemmas() {
         Elements elementLinks = doc.select("a");
         Elements elementSpan = doc.select("span");
@@ -36,7 +37,7 @@ public class LemmasOfPage {
         lemmas.putAll(countLemmas(stringsForLemmas(elementParagraph.text()), lemmas));
         return lemmas;
     }
-
+    @Override
     public HashMap<String, Integer> countLemmas(ArrayList<String> arrayList, HashMap<String, Integer> lemmas) {
         for (String s : arrayList) {
             if (!lemmas.containsKey(s)) {
@@ -48,7 +49,7 @@ public class LemmasOfPage {
         }
         return lemmas;
     }
-
+    @Override
     public ArrayList<String> stringsForLemmas(String string) {
         String[] strings = string.split("[^а-яА-Я]+");
         ArrayList<String> arrayList = Arrays.stream(strings)
@@ -57,8 +58,8 @@ public class LemmasOfPage {
                 .collect(Collectors.toCollection(ArrayList::new));
         return arrayList;
     }
-
-    private boolean superfluousStrings(List<WordformMeaning> lemmas) {
+    @Override
+    public boolean superfluousStrings(List<WordformMeaning> lemmas) {
         String string;
         try {
             string = lemmas.get(0).getMorphology().toString();

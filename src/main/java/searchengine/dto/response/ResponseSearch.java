@@ -8,9 +8,9 @@ import java.util.ArrayList;
 
 
 @Data
-public class Ok {
+public class ResponseSearch {
     private boolean result = false;
     private String error;
     private int count;
-    private ArrayList<ResponseObject> data;
+    private ArrayList<ResponseSearchData> data;
 }

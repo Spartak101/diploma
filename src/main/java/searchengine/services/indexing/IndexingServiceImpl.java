@@ -1,4 +1,4 @@
-package searchengine.services;
+package searchengine.services.indexing;
 
 import lombok.Getter;
 import org.jsoup.Connection;
@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 
 @Service
 @Getter
-public class RepositoryService {
+public class IndexingServiceImpl implements IndexingService {
     private SitesList sites;
     private MarkStop markStop = new MarkStop();
     private SiteRepository siteRepository;
@@ -36,7 +36,7 @@ public class RepositoryService {
     private StopObjectRepository stopObjectRepository;
 
     @Autowired
-    public RepositoryService(SitesList sites, SiteRepository siteRepository, PageRepository pageRepository, LemmaRepository lemmaRepository, IndexObjectRepository indexObjectRepository, StopObjectRepository stopObjectRepository) {
+    public IndexingServiceImpl(SitesList sites, SiteRepository siteRepository, PageRepository pageRepository, LemmaRepository lemmaRepository, IndexObjectRepository indexObjectRepository, StopObjectRepository stopObjectRepository) {
         this.sites = sites;
         this.siteRepository = siteRepository;
         this.pageRepository = pageRepository;
@@ -45,6 +45,7 @@ public class RepositoryService {
         this.stopObjectRepository = stopObjectRepository;
     }
 
+    @Override
     public List<String> initialisationArrayPath() {
         HashSet<String> urlMap = new HashSet<>();
         List<String> urlList;
@@ -70,6 +71,7 @@ public class RepositoryService {
         return urlList;
     }
 
+    @Override
     public void InitialisationIndexing(String pathHtml, MarkStop markStop) throws IOException {
         Site site;
         String path = normalisePathParent(pathHtml);
@@ -99,7 +101,8 @@ public class RepositoryService {
         }
     }
 
-    private String normalisePathParent(String pathParent) {
+    @Override
+    public String normalisePathParent(String pathParent) {
         String string = pathParent.replaceAll("www.", "");
         if (string.charAt(string.length() - 1) != '/') {
             return string + "/";
@@ -107,7 +110,8 @@ public class RepositoryService {
         return string;
     }
 
-    private HashSet<String> pathToThePageFromBD(String pathHtml) {
+    @Override
+    public HashSet<String> pathToThePageFromBD(String pathHtml) {
         HashSet<String> pathSet = new HashSet<>();
         Site site = siteRepository.findByUrl(pathHtml);
         int siteId = site.getId();
@@ -118,7 +122,7 @@ public class RepositoryService {
         }
         return pathSet;
     }
-
+    @Override
     public boolean pageRefresh(String url) throws IOException {
         String pathHtml = url.replaceAll("https?:\\/\\/\\w+\\.\\w+\\/", "");
         String pathParent = url.replaceAll(pathHtml, "");
@@ -132,9 +136,6 @@ public class RepositoryService {
                     .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36")
                     .referrer("http://www.google.com")
                     .get();
-            System.out.println("1-200 " + url);
-            System.out.println(response.statusCode());
-            System.out.println(response.statusMessage());
             Page page = pageRepository.findBySite_idAndPath(site.getId(), pathHtml);
             if (page != null) {
                 pageRepository.updateContentPage(page.getId(), String.valueOf(doc));
