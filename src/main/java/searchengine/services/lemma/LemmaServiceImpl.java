@@ -2,6 +2,7 @@ package searchengine.services.lemma;
 
 import com.github.demidko.aot.WordformMeaning;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.stereotype.Service;
 
@@ -24,10 +25,10 @@ public class LemmaServiceImpl implements LemmaService {
 
     @Override
     public HashMap<String, Integer> lemmas() {
+        HashMap<String, Integer> lemmas = new HashMap<>();
         Elements elementLinks = doc.select("a");
         Elements elementSpan = doc.select("span");
         Elements elementParagraph = doc.select("p");
-        HashMap<String, Integer> lemmas = new HashMap<>();
         for (int i = 1; i < 7; i++) {
             Elements headings = doc.select("h" + i);
             lemmas.putAll(countLemmas(stringsForLemmas(headings.text()), lemmas));
@@ -37,6 +38,7 @@ public class LemmaServiceImpl implements LemmaService {
         lemmas.putAll(countLemmas(stringsForLemmas(elementParagraph.text()), lemmas));
         return lemmas;
     }
+
     @Override
     public HashMap<String, Integer> countLemmas(ArrayList<String> arrayList, HashMap<String, Integer> lemmas) {
         for (String s : arrayList) {
@@ -49,6 +51,7 @@ public class LemmaServiceImpl implements LemmaService {
         }
         return lemmas;
     }
+
     @Override
     public ArrayList<String> stringsForLemmas(String string) {
         String[] strings = string.split("[^а-яА-Я]+");
@@ -58,6 +61,7 @@ public class LemmaServiceImpl implements LemmaService {
                 .collect(Collectors.toCollection(ArrayList::new));
         return arrayList;
     }
+
     @Override
     public boolean superfluousStrings(List<WordformMeaning> lemmas) {
         String string;
@@ -72,5 +76,17 @@ public class LemmaServiceImpl implements LemmaService {
         } catch (Exception ex) {
             return false;
         }
+    }
+
+    @Override
+    public ArrayList<Element> elementsInDoc(Document doc) {
+        ArrayList<Element> elements = new ArrayList<>();
+        elements.addAll(doc.select("a"));
+        elements.addAll(doc.select("span"));
+        elements.addAll(doc.select("p"));
+        for (int i = 1; i < 7; i++) {
+            elements.addAll(doc.select("h" + i));
+        }
+        return elements;
     }
 }

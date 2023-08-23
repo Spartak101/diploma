@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import searchengine.config.SitesList;
-import searchengine.dto.parsing.MarkStop;
+import searchengine.dto.parsing.entity.MarkStop;
 import searchengine.dto.response.ResponseSearch;
 import searchengine.dto.response.ResponseObjectIndexing;
 import searchengine.dto.statistics.StatisticsResponse;
@@ -65,7 +65,7 @@ public class ApiController {
             String pathHtml = list.get(i);
             new Thread(() -> {
                 try {
-                    indexingServiceImpl.InitialisationIndexing(pathHtml, markStop);
+                    indexingServiceImpl.initialisationIndexing(pathHtml, markStop);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }

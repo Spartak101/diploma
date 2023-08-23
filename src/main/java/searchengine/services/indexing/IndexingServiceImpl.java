@@ -7,9 +7,9 @@ import org.jsoup.nodes.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import searchengine.config.SitesList;
-import searchengine.dto.parsing.MarkStop;
-import searchengine.dto.parsing.ParseHtml;
-import searchengine.dto.parsing.RequestStartTime;
+import searchengine.dto.parsing.entity.MarkStop;
+import searchengine.dto.parsing.methods.ParseHtml;
+import searchengine.dto.parsing.entity.RequestStartTime;
 import searchengine.model.Page;
 import searchengine.model.Site;
 import searchengine.model.Status;
@@ -72,7 +72,7 @@ public class IndexingServiceImpl implements IndexingService {
     }
 
     @Override
-    public void InitialisationIndexing(String pathHtml, MarkStop markStop) throws IOException {
+    public void initialisationIndexing(String pathHtml, MarkStop markStop) throws IOException {
         Site site;
         String path = normalisePathParent(pathHtml);
         site = siteRepository.findByUrl(pathHtml);

@@ -1,6 +1,8 @@
 package searchengine.services.lemma;
 
 import com.github.demidko.aot.WordformMeaning;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -14,4 +16,6 @@ public interface LemmaService {
     ArrayList<String> stringsForLemmas(String string);
 
     boolean superfluousStrings(List<WordformMeaning> lemmas);
+
+    ArrayList<Element> elementsInDoc(Document doc);
 }

@@ -1,7 +1,8 @@
-package searchengine.dto.parsing;
+package searchengine.dto.parsing.methods;
 
 import lombok.Data;
 import org.jsoup.nodes.Document;
+import searchengine.dto.parsing.entity.SiteName;
 import searchengine.model.*;
 import searchengine.repository.*;
 import searchengine.services.lemma.LemmaServiceImpl;

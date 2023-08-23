@@ -1,4 +1,4 @@
-package searchengine.dto.parsing;
+package searchengine.dto.parsing.entity;
 
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;

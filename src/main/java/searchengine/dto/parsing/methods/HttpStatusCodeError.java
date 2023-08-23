@@ -1,4 +1,4 @@
-package searchengine.dto.parsing;
+package searchengine.dto.parsing.methods;
 
 public class HttpStatusCodeError {
     private int code;

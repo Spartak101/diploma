@@ -1,10 +1,12 @@
-package searchengine.dto.parsing;
+package searchengine.dto.parsing.methods;
 
 import lombok.Data;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
+import searchengine.dto.parsing.entity.MarkStop;
+import searchengine.dto.parsing.entity.RequestStartTime;
 import searchengine.model.Site;
 import searchengine.repository.*;
 
