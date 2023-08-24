@@ -10,7 +10,8 @@ import searchengine.model.Site;
 @Repository
 public interface SiteRepository extends JpaRepository<Site, Integer> {
 
-
+   @Query(value = "SELECT id FROM search_engine.site WHERE url = ?1",
+           nativeQuery = true)
    int findIdByUrl(String url);
 
    Site findById(int idSite);

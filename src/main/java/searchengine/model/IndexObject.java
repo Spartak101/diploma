@@ -2,11 +2,13 @@ package searchengine.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
-
+import lombok.Getter;
+import lombok.Setter;
 
 
 @Entity
-@Data
+@Getter
+@Setter
 public class IndexObject {
 
     @Id
@@ -20,4 +22,6 @@ public class IndexObject {
     private Lemma lemma;
     @Column(columnDefinition = "FLOAT", nullable = false)
     private Float runk;
+
+    public IndexObject(){}
 }

@@ -11,6 +11,7 @@ import org.thymeleaf.util.ArrayUtils;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.dto.response.SnippetEntity;
+import searchengine.model.Status;
 import searchengine.services.lemma.LemmaServiceImpl;
 import searchengine.dto.response.ResponseSearch;
 import searchengine.dto.response.ResponseSearchData;
@@ -28,7 +29,6 @@ import static com.github.demidko.aot.WordformMeaning.lookupForMeanings;
 
 @Service
 @Getter
-@RequiredArgsConstructor
 public class SearchServiceImpl implements SearchService {
     private final SitesList sites;
     private SiteRepository siteRepository;
@@ -36,6 +36,14 @@ public class SearchServiceImpl implements SearchService {
     private LemmaRepository lemmaRepository;
     private IndexObjectRepository indexObjectRepository;
 
+    @Autowired
+    public SearchServiceImpl(SitesList sites, SiteRepository siteRepository, PageRepository pageRepository, LemmaRepository lemmaRepository, IndexObjectRepository indexObjectRepository) {
+        this.sites = sites;
+        this.siteRepository = siteRepository;
+        this.pageRepository = pageRepository;
+        this.lemmaRepository = lemmaRepository;
+        this.indexObjectRepository = indexObjectRepository;
+    }
 
     @Override
     public ResponseSearch searchResponce(String query, int offset, int limit, String site) {
@@ -45,15 +53,25 @@ public class SearchServiceImpl implements SearchService {
             return responseSearch;
         }
         LemmaServiceImpl lemmaServiceImpl = new LemmaServiceImpl();
-        Set<String> arrayLemmasQuery = (Set<String>) lemmaServiceImpl.stringsForLemmas(query);
-        int site_id = siteRepository.findIdByUrl(site);
+        HashSet<String> arrayLemmasQuery = new HashSet<>();
+        arrayLemmasQuery.addAll(lemmaServiceImpl.stringsForLemmas(query));
+        int site_id = 0;
+        if (site != null) {
+             site_id = siteRepository.findIdByUrl(site);
+        }
         ArrayList<String> sortedFrequencyLemmas = frequencyLemmaQuery(arrayLemmasQuery, site_id);
-//        ArrayList<ResponseSearchData> responseSearchData = responseSearch.getData();
-
+        ArrayList<ResponseSearchData> responseSearchData = responseObjectArrayList(sortedFrequencyLemmas, site);
+        if (!isTheSiteIndexed(site)) {
+            responseSearch.setError("Индексация не завершена! Ответ на запрос будет не полон!");
+        }
+        responseSearch.setError("");
+        responseSearch.setResult(true);
+        responseSearch.setCount(responseSearchData.size());
+        responseSearch.setData(responseSearchData);
         return responseSearch;
     }
 
-    @Override
+
     public boolean queryIsEmpty(String query) {
         String[] strings = query.split("[^а-яёЁА-Я]");
         if (ArrayUtils.isEmpty(strings)) {
@@ -62,23 +80,24 @@ public class SearchServiceImpl implements SearchService {
         return false;
     }
 
-    @Override
+
     public ArrayList<String> frequencyLemmaQuery(Set<String> array, int site_id) {
         HashMap<String, Integer> countLemma = new HashMap<>();
         float allPages;
         if (site_id == 0) {
             collectionAtZero(array, countLemma);
-        }
-        for (String s : array) {
-            Lemma lemma = lemmaRepository.findByLemmaAndSite_id(s, site_id);
-            allPages = pageRepository.findCountPageBySite_id(site_id);
-            if (lemma == null) {
-                continue;
+        } else {
+            for (String s : array) {
+                Lemma lemma = lemmaRepository.findByLemmaAndSite_id(s, site_id);
+                allPages = pageRepository.findCountPageBySite_id(site_id);
+                if (lemma == null) {
+                    continue;
+                }
+                if (allPages / lemma.getFrequency() > 0.7) {
+                    continue;
+                }
+                countLemma.put(s, lemma.getFrequency());
             }
-            if (allPages / lemma.getFrequency() > 0.7) {
-                continue;
-            }
-            countLemma.put(s, lemma.getFrequency());
         }
         return (ArrayList<String>) countLemma.entrySet().stream()
                 .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
@@ -86,27 +105,27 @@ public class SearchServiceImpl implements SearchService {
                 .collect(Collectors.toList());
     }
 
-    @Override
+
     public void collectionAtZero(Set<String> array, HashMap<String, Integer> countLemma) {
-        float allPages;
+        float allPages = pageRepository.findCountPageAll();
         for (String s : array) {
             ArrayList<Lemma> lemmas = lemmaRepository.findAllByLemma(s);
             if (lemmas == null) {
                 continue;
             }
-            allPages = pageRepository.findCountPageAll();
             int frequencyAll = 0;
             for (Lemma l : lemmas) {
                 frequencyAll += l.getFrequency();
             }
-            if (allPages / frequencyAll > 0.7) {
+            if ((frequencyAll / allPages) > 0.7) {
+                System.out.println(allPages / frequencyAll);
                 continue;
             }
             countLemma.put(s, frequencyAll);
         }
     }
 
-    @Override
+
     public ArrayList<ResponseSearchData> responseObjectArrayList(ArrayList<String> sortedFrequencyLemmas, String site) {
         ArrayList<ResponseSearchData> array = new ArrayList<>();
         LinkedList<Page> pagesOne;
@@ -117,30 +136,33 @@ public class SearchServiceImpl implements SearchService {
                 pagesNext = pagesWithLemma(sortedFrequencyLemmas.get(i));
                 pagesOne.forEach(pagesNext::removeFirstOccurrence);
             }
-        }
-        pagesOne = lemmaPagesOnTheWebsite(sortedFrequencyLemmas.get(0), site);
-        for (int i = 1; i < sortedFrequencyLemmas.size(); i++) {
-            pagesNext = lemmaPagesOnTheWebsite(sortedFrequencyLemmas.get(i), site);
-            pagesOne.forEach(pagesNext::removeFirstOccurrence);
+        } else {
+            pagesOne = lemmaPagesOnTheWebsite(sortedFrequencyLemmas.get(0), site);
+            for (int i = 1; i < sortedFrequencyLemmas.size(); i++) {
+                pagesNext = lemmaPagesOnTheWebsite(sortedFrequencyLemmas.get(i), site);
+                pagesOne.forEach(pagesNext::removeFirstOccurrence);
+            }
         }
         array = snippetGenerator(pagesOne, sortedFrequencyLemmas);
         return null;
     }
 
-    @Override
+
     public LinkedList<Page> pagesWithLemma(String lemma) {
         ArrayList<Integer> lemma_id = lemmaRepository.findAllIdByLemma(lemma);
         ArrayList<Integer> pagesId = indexObjectRepository.findAllByLemma_idIn(lemma_id);
-        LinkedList<Page> pages = (LinkedList<Page>) pageRepository.findAllById(pagesId);
+        LinkedList<Page> pages = new LinkedList();
+        pages.addAll(pageRepository.findAllById(pagesId));
         return pages;
     }
 
-    @Override
+
     public LinkedList<Page> lemmaPagesOnTheWebsite(String lemma, String site) {
         int site_id = siteRepository.findIdByUrl(site);
         ArrayList<Integer> lemma_id = lemmaRepository.findAllIdByLemmaAndSite_id(lemma, site_id);
         ArrayList<Integer> pagesId = indexObjectRepository.findAllByLemma_idIn(lemma_id);
-        LinkedList<Page> pages = (LinkedList<Page>) pageRepository.findAllById(pagesId);
+        LinkedList<Page> pages = new LinkedList();
+        pages.addAll(pageRepository.findAllById(pagesId));
         return pages;
     }
 
@@ -154,17 +176,24 @@ public class SearchServiceImpl implements SearchService {
             String siteUrlCropped = siteUrl.substring(0, siteUrl.length() - 1);
             searchData.setSite(siteUrlCropped);
             searchData.setUri("/" + page.getPath());
-            searchData.setTitle(Document.createShell(page.getContent()).select("title").text());
-            sites.getSites().stream().filter(site -> site.getUrl().equals(siteUrl)).map(Site::getName).forEach(searchData::setSiteName);
+            String doc = page.getContent();
+            searchData.setTitle(doc.select("title").text());
+            for (Site site : sites.getSites()) {
+                if (site.getUrl().equals(siteUrl)) {
+                    String name = site.getName();
+                    searchData.setSiteName(name);
+                }
+            }
             if (searchData.getSiteName() == null) {
                 searchData.setSiteName(Document.createShell(page.getContent()).select("title").text());
             }
-
+            searchData.setRelevance(revalenceCalculator(lemmasQuery, page));
+            snippets.add(searchData);
         }
         return snippets;
     }
 
-    public HashMap<String, Integer> snippetExtractor(Page page, ArrayList<String> lemmasQuery) {
+    public String snippetExtractor(Page page, ArrayList<String> lemmasQuery) {
         LemmaServiceImpl lemmaService = new LemmaServiceImpl();
         ArrayList<Element> elements = lemmaService.elementsInDoc(Document.createShell(page.getContent()));
         ArrayList<SnippetEntity> snippetArray = new ArrayList<>();
@@ -214,5 +243,54 @@ public class SearchServiceImpl implements SearchService {
             return true;
         }
         return false;
+    }
+
+    public int revalenceCalculator(ArrayList<String> lemmasQuery, Page page) {
+        int absoluteRevalence = 0;
+        for (String s : lemmasQuery) {
+            int site_id = pageRepository.findSite_idById(page.getId());
+            int lemma_id = 0;
+            try {
+                lemma_id = lemmaRepository.findIdByLemmaAndSite_id(s, site_id);
+            } catch (Exception e) {
+                continue;
+            }
+            if (lemma_id != 0) {
+                absoluteRevalence += indexObjectRepository.findById(lemma_id).get().getRunk();
+            }
+        }
+        return absoluteRevalence;
+    }
+
+    public ArrayList<ResponseSearchData> normalizerRelevance(ArrayList<ResponseSearchData> array) {
+        ArrayList<ResponseSearchData> arraySort = array;
+        float maxRelevance = 0;
+        for (ResponseSearchData r : arraySort) {
+            if (r.getRelevance() < maxRelevance) {
+                maxRelevance = r.getRelevance();
+            }
+        }
+        for (ResponseSearchData r : arraySort) {
+            float relativeRelevance = r.getRelevance() / maxRelevance;
+            r.setRelevance(relativeRelevance);
+        }
+        arraySort.sort(Comparator.comparing(ResponseSearchData::getRelevance));
+        return arraySort;
+    }
+
+    public boolean isTheSiteIndexed(String site) {
+        if (site == null) {
+            List<searchengine.model.Site> siteList = siteRepository.findAll();
+            for (searchengine.model.Site s : siteList) {
+                if (!s.getStatus().equals(Status.INDEXED)) {
+                    return false;
+                }
+            }
+        }
+        searchengine.model.Site siteSolo = siteRepository.findByUrl(site);
+        if (!siteSolo.getStatus().equals(Status.INDEXED)) {
+            return false;
+        }
+        return true;
     }
 }

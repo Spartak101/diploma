@@ -33,8 +33,10 @@ public interface PageRepository extends JpaRepository<Page, Integer> {
     Page findBySite_idAndPath(int site_id, String path);
 
     @Modifying
-    @Transactional
     @Query(value = "UPDATE search_engine.page p SET p.content = ?2 WHERE p.id = ?1",
             nativeQuery = true)
     void updateContentPage(Integer id, String s);
+    @Query(value = "SELECT site_id FROM search_engine.page WHERE id = ?1",
+            nativeQuery = true)
+    int findSite_idById(Integer id);
 }

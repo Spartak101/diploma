@@ -19,12 +19,12 @@ public interface IndexObjectRepository extends JpaRepository<IndexObject, Intege
     default ArrayList<Integer> findAllByLemma_idIn(ArrayList<Integer> lemmaId){
         Set<Integer> pages_id = new HashSet<>();
         for (int id : lemmaId) {
-            int page_id = findPage_idByLemma_id(id);
-            pages_id.add(page_id);
+            ArrayList<Integer> page_id = findPage_idByLemma_id(id);
+            pages_id.addAll(page_id);
         }
         return (ArrayList<Integer>) pages_id.stream().collect(Collectors.toList());
     }
     @Query(value = "SELECT page_id FROM search_engine.index_object WHERE lemma_id = ?1",
             nativeQuery = true)
-    int findPage_idByLemma_id(int id);
+    ArrayList<Integer> findPage_idByLemma_id(int id);
 }
