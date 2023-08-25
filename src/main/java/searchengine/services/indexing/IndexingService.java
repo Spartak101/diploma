@@ -11,7 +11,9 @@ public interface IndexingService {
 
     void initialisationIndexing(String pathHtml, MarkStop markStop) throws IOException;
 
-    String normalisePathParent(String pathParent);
+    static String normalisePathParent(String pathParent) {
+        return null;
+    }
 
     HashSet<String> pathToThePageFromBD(String pathHtml);
 

@@ -101,8 +101,8 @@ public class IndexingServiceImpl implements IndexingService {
         }
     }
 
-    @Override
-    public String normalisePathParent(String pathParent) {
+
+    public static String normalisePathParent(String pathParent) {
         String string = pathParent.replaceAll("www.", "");
         if (string.charAt(string.length() - 1) != '/') {
             return string + "/";

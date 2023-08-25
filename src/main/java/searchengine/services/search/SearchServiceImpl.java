@@ -3,8 +3,10 @@ package searchengine.services.search;
 import com.github.demidko.aot.WordformMeaning;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.nodes.TextNode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.util.ArrayUtils;
@@ -12,6 +14,7 @@ import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.dto.response.SnippetEntity;
 import searchengine.model.Status;
+import searchengine.services.indexing.IndexingServiceImpl;
 import searchengine.services.lemma.LemmaServiceImpl;
 import searchengine.dto.response.ResponseSearch;
 import searchengine.dto.response.ResponseSearchData;
@@ -26,6 +29,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.github.demidko.aot.WordformMeaning.lookupForMeanings;
+import static searchengine.services.indexing.IndexingServiceImpl.normalisePathParent;
 
 @Service
 @Getter
@@ -57,7 +61,7 @@ public class SearchServiceImpl implements SearchService {
         arrayLemmasQuery.addAll(lemmaServiceImpl.stringsForLemmas(query));
         int site_id = 0;
         if (site != null) {
-             site_id = siteRepository.findIdByUrl(site);
+            site_id = siteRepository.findIdByUrl(site);
         }
         ArrayList<String> sortedFrequencyLemmas = frequencyLemmaQuery(arrayLemmasQuery, site_id);
         ArrayList<ResponseSearchData> responseSearchData = responseObjectArrayList(sortedFrequencyLemmas, site);
@@ -127,7 +131,7 @@ public class SearchServiceImpl implements SearchService {
 
 
     public ArrayList<ResponseSearchData> responseObjectArrayList(ArrayList<String> sortedFrequencyLemmas, String site) {
-        ArrayList<ResponseSearchData> array = new ArrayList<>();
+        ArrayList<ResponseSearchData> array;
         LinkedList<Page> pagesOne;
         LinkedList<Page> pagesNext;
         if (site == null) {
@@ -144,7 +148,7 @@ public class SearchServiceImpl implements SearchService {
             }
         }
         array = snippetGenerator(pagesOne, sortedFrequencyLemmas);
-        return null;
+        return array;
     }
 
 
@@ -176,16 +180,17 @@ public class SearchServiceImpl implements SearchService {
             String siteUrlCropped = siteUrl.substring(0, siteUrl.length() - 1);
             searchData.setSite(siteUrlCropped);
             searchData.setUri("/" + page.getPath());
-            String doc = page.getContent();
+            Document doc = Jsoup.parse(page.getContent());
             searchData.setTitle(doc.select("title").text());
             for (Site site : sites.getSites()) {
-                if (site.getUrl().equals(siteUrl)) {
+                String url = normalisePathParent(site.getUrl());
+                if (url.equals(siteUrl)) {
                     String name = site.getName();
                     searchData.setSiteName(name);
                 }
             }
             if (searchData.getSiteName() == null) {
-                searchData.setSiteName(Document.createShell(page.getContent()).select("title").text());
+                searchData.setSiteName(Jsoup.parse(page.getContent()).select("title").text());
             }
             searchData.setRelevance(revalenceCalculator(lemmasQuery, page));
             snippets.add(searchData);
@@ -195,12 +200,15 @@ public class SearchServiceImpl implements SearchService {
 
     public String snippetExtractor(Page page, ArrayList<String> lemmasQuery) {
         LemmaServiceImpl lemmaService = new LemmaServiceImpl();
-        ArrayList<Element> elements = lemmaService.elementsInDoc(Document.createShell(page.getContent()));
+        ArrayList<Element> elements = lemmaService.elementsInDoc(Jsoup.parse(page.getContent()));
         ArrayList<SnippetEntity> snippetArray = new ArrayList<>();
-        elements.forEach(el -> extractedSnippet(lemmasQuery, snippetArray, el));
+        for (Element el : elements) {
+            extractedSnippet(lemmasQuery, snippetArray, el);
+        }
         Collections.sort(snippetArray, Comparator.comparing(SnippetEntity::getNumberOfMatches));
         StringBuilder stringBuilder = new StringBuilder();
         int countWordInSnippet = 0;
+
         for (SnippetEntity snippetEntity : snippetArray) {
             if (countWordInSnippet < 30) {
                 stringBuilder.append(snippetEntity.getSnippet());
@@ -213,31 +221,55 @@ public class SearchServiceImpl implements SearchService {
     private void extractedSnippet(ArrayList<String> lemmasQuery, ArrayList<SnippetEntity> snippetArray, Element el) {
         StringBuilder stringBuilder = new StringBuilder();
         int count = 0;
-        String[] text = el.toString().split("<([\\s\\S]+?)>");
-        String[] tags = el.toString().split(text[1]);
-        String[] words = text[1].split(" ");
-        for (int i = 0; i < words.length; i++) {
-            for (String l : lemmasQuery) {
-                if (wordComparator(words[i], l)) {
-                    words[i] = "<b>" + words[i] + "</b>";
-                    count++;
+        String element = el.text();
+        if (el.text().matches("^((8|\\+7)[\\- ]?)?(\\(?\\d{3}\\)?[\\- ]?)?[\\d\\- ]{7,10}$")) {
+            return;
+        }
+        String[] components = element.split("<([\\s\\S]+?)>");
+        String[] tags = element.split("(?<=\\>).+?(?=\\<)");
+        int wordLenth = 0;
+        for (int i = 1; i < components.length; i++) {
+            StringBuilder sb = new StringBuilder();
+            String[] words = components[i].split(" ");
+            wordLenth += words.length;
+            for (int j = 0; j < words.length; i++) {
+                for (String l : lemmasQuery) {
+                    String w = words[j].replaceAll("[^а-яёЁА-Я]", "");
+                    if (w.isEmpty()) {
+                        continue;
+                    }
+                    if (wordComparator(w, l)) {
+                        System.out.println(w);
+                        words[j] = "<b>" + words[j] + "</b>";
+                        count++;
+                    }
                 }
             }
-        }
-        if (count > 0) {
-            stringBuilder.append(tags[0]);
-            for (String s : words) {
-                stringBuilder.append(s + " ");
+            if (count > 0) {
+                for (String s : words) {
+                    sb.append(s.trim() + " ");
+                }
             }
-            stringBuilder.append(tags[1]);
+            components[i] = sb.toString();
         }
+//        Склеить
+//        for (int i = 0; i < tags.length; i++) {
+//            stringBuilder.append(tags[i]);
+//            if ((i + 1) < components.length) {
+//                stringBuilder.append(components[i + 1]);
+//            }
+//        }
         String snippet = stringBuilder.toString();
-        SnippetEntity snippetEntity = new SnippetEntity(snippet, count, words.length);
+        SnippetEntity snippetEntity = new SnippetEntity(snippet, count, wordLenth);
         snippetArray.add(snippetEntity);
     }
 
     public boolean wordComparator(String world, String lemma) {
         List<WordformMeaning> lemmas = lookupForMeanings(world);
+//        КОСТЫЛЬ!!! Надо менять или дополнять библиотеку.
+        if (lemmas.isEmpty()) {
+            return false;
+        }
         String lemmaFromTheWord = String.valueOf(lemmas.get(0).getLemma());
         if (lemmaFromTheWord.equals(lemma)) {
             return true;
