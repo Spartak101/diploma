@@ -218,10 +218,11 @@ public class SearchServiceImpl implements SearchService {
         return stringBuilder.toString();
     }
 
+
     private void extractedSnippet(ArrayList<String> lemmasQuery, ArrayList<SnippetEntity> snippetArray, Element el) {
         StringBuilder stringBuilder = new StringBuilder();
         int count = 0;
-        String element = el.text();
+        String element = el.toString();
         if (el.text().matches("^((8|\\+7)[\\- ]?)?(\\(?\\d{3}\\)?[\\- ]?)?[\\d\\- ]{7,10}$")) {
             return;
         }
@@ -252,13 +253,12 @@ public class SearchServiceImpl implements SearchService {
             }
             components[i] = sb.toString();
         }
-//        Склеить
-//        for (int i = 0; i < tags.length; i++) {
-//            stringBuilder.append(tags[i]);
-//            if ((i + 1) < components.length) {
-//                stringBuilder.append(components[i + 1]);
-//            }
-//        }
+        for (int i = 0; i < tags.length; i++) {
+            stringBuilder.append(tags[i]);
+            if ((i + 1) < components.length) {
+                stringBuilder.append(components[i + 1]);
+            }
+        }
         String snippet = stringBuilder.toString();
         SnippetEntity snippetEntity = new SnippetEntity(snippet, count, wordLenth);
         snippetArray.add(snippetEntity);
@@ -266,7 +266,7 @@ public class SearchServiceImpl implements SearchService {
 
     public boolean wordComparator(String world, String lemma) {
         List<WordformMeaning> lemmas = lookupForMeanings(world);
-//        КОСТЫЛЬ!!! Надо менять или дополнять библиотеку.
+//   TODO:    КОСТЫЛЬ!!! Надо менять или дополнять библиотеку.
         if (lemmas.isEmpty()) {
             return false;
         }
